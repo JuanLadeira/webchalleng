@@ -40,11 +40,14 @@ jobs:
         working-directory: backend
 
     env:
-      DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test_db
-      REDIS_URL: redis://localhost:6379/0
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: meetings
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
       JWT_SECRET_KEY: test-secret-key
-      CELERY_BROKER_URL: redis://localhost:6379/0
-      CELERY_RESULT_BACKEND: redis://localhost:6379/1
       SMTP_HOST: localhost
       SMTP_PORT: 1025
 
