@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.schedules import crontab  # noqa: F401
 
 from app.config import settings
 
@@ -15,4 +16,10 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    beat_schedule={
+        "process-outbox-every-10s": {
+            "task": "process_pending_events",
+            "schedule": settings.OUTBOX_POLL_INTERVAL_SECONDS,
+        },
+    },
 )

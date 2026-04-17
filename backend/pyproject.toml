@@ -42,10 +42,6 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 concurrency = ["greenlet"]
-omit = [
-    "app/worker/celery_app.py",
-    "app/worker/tasks.py",
-]
 
 [tool.coverage.report]
 exclude_lines = [
