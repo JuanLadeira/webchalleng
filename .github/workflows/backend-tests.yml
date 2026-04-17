@@ -14,7 +14,7 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: test_db
+          POSTGRES_DB: meetings
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
         ports:
