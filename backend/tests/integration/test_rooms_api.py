@@ -80,6 +80,25 @@ class TestListRooms:
         assert isinstance(rooms, list)
         assert any(r["name"] == room_payload["name"] for r in rooms)
 
+    async def test_list_includes_inactive_when_requested(
+        self, db_client: AsyncClient, auth_headers, room_payload
+    ):
+        payload = {**room_payload, "name": "Sala Inativa Lista"}
+        created = await db_client.post("/api/rooms", json=payload, headers=auth_headers)
+        room_id = created.json()["id"]
+        await db_client.delete(f"/api/rooms/{room_id}", headers=auth_headers)
+
+        active_only = await db_client.get("/api/rooms", headers=auth_headers)
+        all_rooms = await db_client.get(
+            "/api/rooms?active_only=false", headers=auth_headers
+        )
+
+        active_names = [r["name"] for r in active_only.json()]
+        all_names = [r["name"] for r in all_rooms.json()]
+
+        assert payload["name"] not in active_names
+        assert payload["name"] in all_names
+
     async def test_list_requires_auth(self, db_client: AsyncClient):
         response = await db_client.get("/api/rooms")
         assert response.status_code == 401

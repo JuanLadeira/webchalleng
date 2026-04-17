@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from app.domain.entities.booking import Booking, BookingStatus
 from app.domain.entities.outbox_event import EventType, OutboxEvent, OutboxStatus
+from app.domain.entities.user import User, UserRole
 
 NOW = datetime.now(tz=timezone.utc)
 
@@ -81,3 +82,34 @@ class TestOutboxEventEntity:
         e1 = self._make_event()
         e2 = self._make_event()
         assert e1.idempotency_key != e2.idempotency_key
+
+
+class TestUserEntity:
+    def _make_user(self, **kwargs):
+        defaults = dict(
+            email="user@example.com",
+            name="Usuário Teste",
+            password_hash="hashed",
+        )
+        return User(**{**defaults, **kwargs})
+
+    def test_default_role_is_member(self):
+        user = self._make_user()
+        assert user.role == UserRole.MEMBER
+
+    def test_default_is_active(self):
+        user = self._make_user()
+        assert user.is_active is True
+
+    def test_unique_id_per_instance(self):
+        u1 = self._make_user()
+        u2 = self._make_user()
+        assert u1.id != u2.id
+
+    def test_owner_role(self):
+        user = self._make_user(role=UserRole.OWNER)
+        assert user.role == UserRole.OWNER
+
+    def test_inactive_user(self):
+        user = self._make_user(is_active=False)
+        assert user.is_active is False

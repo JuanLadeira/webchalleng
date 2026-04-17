@@ -40,6 +40,18 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 
+[tool.coverage.run]
+concurrency = ["greenlet"]
+omit = [
+    "app/worker/celery_app.py",
+    "app/worker/tasks.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+]
 
 [tool.ruff]
 line-length = 88

@@ -1,5 +1,9 @@
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.infrastructure.database.models import UserModel
 
 
 @pytest.fixture
@@ -59,6 +63,31 @@ class TestLogin:
             data={"username": "naoexiste@example.com", "password": "qualquer"},
         )
         assert response.status_code == 401
+
+
+class TestLoginInactiveUser:
+    async def test_login_inactive_user_returns_403(
+        self, db_client: AsyncClient, db_session: AsyncSession
+    ):
+        payload = {
+            "name": "Inativo",
+            "email": "inativo@example.com",
+            "password": "senha123",
+        }
+        await db_client.post("/api/auth/register", json=payload)
+
+        await db_session.execute(
+            update(UserModel)
+            .where(UserModel.email == payload["email"])
+            .values(is_active=False)
+        )
+        await db_session.flush()
+
+        response = await db_client.post(
+            "/api/auth/login",
+            data={"username": payload["email"], "password": payload["password"]},
+        )
+        assert response.status_code == 403
 
 
 class TestMe:
