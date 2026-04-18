@@ -1,5 +1,12 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import type { UserRole } from "../api/client";
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  OWNER: "Administrador",
+  MEMBER: "Membro",
+  SUPER_ADMIN: "Super Admin",
+};
 
 interface NavItemProps {
   to: string;
@@ -19,7 +26,7 @@ function NavItem({ to, label, icon }: NavItemProps) {
         }`
       }
     >
-      <span className="text-base">{icon}</span>
+      <span className="text-base" aria-hidden="true">{icon}</span>
       {label}
     </NavLink>
   );
@@ -70,14 +77,14 @@ export function Sidebar() {
           <p className="text-sm font-medium text-white">{user?.name}</p>
           <p className="truncate text-xs text-gray-500">{user?.email}</p>
           <span className="mt-1 inline-block rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-300">
-            {user?.role}
+            {user?.role ? (ROLE_LABELS[user.role] ?? user.role) : ""}
           </span>
         </div>
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
         >
-          <span>↩</span>
+          <span aria-hidden="true">↩</span>
           Sair
         </button>
       </div>

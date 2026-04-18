@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 import { bookingsApi, type Booking } from "../api/client";
 import { BookingForm } from "./BookingForm";
 import type { BookingFormData } from "./BookingForm";
@@ -63,18 +64,21 @@ export function BookingModal({
       }
       onSuccess();
     } catch (err: unknown) {
-      const res = (err as { response?: { status?: number; data?: { detail?: string } } }).response;
-      const status = res?.status;
-      const detail = res?.data?.detail;
-      if (status === 409) {
-        showToast("Conflito de horário nesse período.", "error");
-      } else if (status === 422) {
-        showToast(
-          typeof detail === "string" ? detail : "Dados inválidos. Verifique as datas.",
-          "error",
-        );
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        const detail = err.response?.data?.detail;
+        if (status === 409) {
+          showToast("Conflito de horário nesse período.", "error");
+        } else if (status === 422) {
+          showToast(
+            typeof detail === "string" ? detail : "Dados inválidos. Verifique as datas.",
+            "error",
+          );
+        } else {
+          showToast("Erro ao salvar reserva. Tente novamente.", "error");
+        }
       } else {
-        showToast("Erro ao salvar reserva. Tente novamente.", "error");
+        showToast("Erro inesperado. Tente novamente.", "error");
       }
     } finally {
       setIsLoading(false);

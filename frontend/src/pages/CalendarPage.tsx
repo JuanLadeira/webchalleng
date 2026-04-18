@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import type { EventClickArg, DateSelectArg, EventContentArg, EventDropArg } from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
@@ -39,6 +39,7 @@ interface DetailModalProps {
 function DetailModal({ booking, isOwn, onClose, onCancelled, onEdit }: DetailModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const fmt = (iso: string) =>
     new Date(iso).toLocaleString("pt-BR", {
@@ -58,13 +59,13 @@ function DetailModal({ booking, isOwn, onClose, onCancelled, onEdit }: DetailMod
   };
 
   const handleCancel = async () => {
-    if (!confirm("Cancelar esta reserva?")) return;
     setLoading(true);
     try {
       await bookingsApi.cancel(booking.id);
       onCancelled();
     } catch {
       setError("Erro ao cancelar. Tente novamente.");
+      setConfirming(false);
     } finally {
       setLoading(false);
     }
@@ -106,7 +107,7 @@ function DetailModal({ booking, isOwn, onClose, onCancelled, onEdit }: DetailMod
         {/* Body */}
         <div className="px-6 py-4 space-y-3">
           <div className="flex items-start gap-3 text-sm text-gray-700">
-            <span className="mt-0.5 text-gray-400">🕐</span>
+            <span className="mt-0.5 text-gray-400" aria-hidden="true">🕐</span>
             <div>
               <p>{fmt(booking.start_at)}</p>
               <p className="text-gray-500">até {fmt(booking.end_at)}</p>
@@ -115,7 +116,7 @@ function DetailModal({ booking, isOwn, onClose, onCancelled, onEdit }: DetailMod
 
           {booking.participants.length > 0 && (
             <div className="flex items-start gap-3 text-sm text-gray-700">
-              <span className="mt-0.5 text-gray-400">👥</span>
+              <span className="mt-0.5 text-gray-400" aria-hidden="true">👥</span>
               <p>{booking.participants.map((p) => p.email).join(", ")}</p>
             </div>
           )}
@@ -141,29 +142,48 @@ function DetailModal({ booking, isOwn, onClose, onCancelled, onEdit }: DetailMod
         )}
 
         <div className="flex gap-3 px-6 pb-6">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-          >
-            Fechar
-          </button>
-          {isOwn && booking.status === "active" && (
+          {confirming ? (
             <>
-              {onEdit && (
-                <button
-                  onClick={onEdit}
-                  className="flex-1 rounded-lg border border-blue-600 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                >
-                  Editar
-                </button>
-              )}
+              <button
+                onClick={() => setConfirming(false)}
+                className="flex-1 rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                Voltar
+              </button>
               <button
                 onClick={handleCancel}
                 disabled={loading}
                 className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
               >
-                {loading ? "Cancelando..." : "Cancelar"}
+                {loading ? "Cancelando..." : "Confirmar cancelamento"}
               </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={onClose}
+                className="flex-1 rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                Fechar
+              </button>
+              {isOwn && booking.status === "active" && (
+                <>
+                  {onEdit && (
+                    <button
+                      onClick={onEdit}
+                      className="flex-1 rounded-lg border border-blue-600 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                    >
+                      Editar
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setConfirming(true)}
+                    className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700"
+                  >
+                    Cancelar
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -232,7 +252,7 @@ export function CalendarPage() {
   }, [highlightId, bookings, targetDate, setSearchParams]);
 
   // Monta eventos para o FullCalendar
-  const events = bookings.map((b: Booking) => {
+  const events = useMemo(() => bookings.map((b: Booking) => {
     const color = hashColor(b.title);
     const isHighlight = b.id === highlightId;
     return {
@@ -247,7 +267,7 @@ export function CalendarPage() {
       classNames: b.status !== "active" ? ["fc-event-cancelled"] : [],
       editable: b.status === "active" && b.user_id === user?.id,
     };
-  });
+  }), [bookings, highlightId, user?.id]);
 
   const toLocal = (d: Date) => {
     const pad = (n: number) => String(n).padStart(2, "0");
@@ -297,9 +317,9 @@ export function CalendarPage() {
     }
   }, [queryClient, show]);
 
-  const invalidate = () => {
+  const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["bookings"] });
-  };
+  }, [queryClient]);
 
   return (
     <Layout>

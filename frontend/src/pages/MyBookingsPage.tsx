@@ -44,7 +44,8 @@ function BookingRow({ booking, onClick }: BookingRowProps) {
             <p className="mt-0.5 text-sm text-gray-500">{range}</p>
             {booking.participants.length > 0 && (
               <p className="mt-1 text-xs text-gray-400">
-                👥 {booking.participants.map((p) => p.email).join(", ")}
+                <span aria-hidden="true">👥</span>{" "}
+                {booking.participants.map((p) => p.email).join(", ")}
               </p>
             )}
           </div>
@@ -94,7 +95,7 @@ export function MyBookingsPage() {
           </p>
         </div>
         <button
-          onClick={() => navigate("/bookings/new")}
+          onClick={() => navigate("/calendar")}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           + Nova Reserva
@@ -118,7 +119,7 @@ export function MyBookingsPage() {
               <div className="rounded-xl border border-dashed border-gray-200 bg-white py-12 text-center">
                 <p className="text-sm text-gray-400">Nenhuma reserva ativa.</p>
                 <button
-                  onClick={() => navigate("/bookings/new")}
+                  onClick={() => navigate("/calendar")}
                   className="mt-2 text-sm text-blue-600 hover:underline"
                 >
                   Criar uma reserva →

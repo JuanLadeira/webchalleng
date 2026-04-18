@@ -48,7 +48,8 @@ export function AdminRoomsPage() {
 
       {rooms && (
         <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px] text-sm">
             <thead className="border-b border-gray-100 bg-gray-50">
               <tr>
                 <th className="px-5 py-3 text-left font-medium text-gray-500">Nome</th>
@@ -58,7 +59,7 @@ export function AdminRoomsPage() {
                 <th className="px-5 py-3 text-right font-medium text-gray-500">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-100">
               {rooms.map((room) => (
                 <tr key={room.id} className="hover:bg-gray-50">
                   <td className="px-5 py-4 font-medium text-gray-800">{room.name}</td>
@@ -93,6 +94,7 @@ export function AdminRoomsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </Layout>

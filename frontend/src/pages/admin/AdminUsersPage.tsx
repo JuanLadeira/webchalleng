@@ -1,5 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { adminApi } from "../../api/client";
+import { adminApi, type UserRole } from "../../api/client";
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  OWNER: "Administrador",
+  MEMBER: "Membro",
+  SUPER_ADMIN: "Super Admin",
+};
 import { Layout } from "../../components/Layout";
 import { Toast, useToast } from "../../components/Toast";
 import { useAuth } from "../../contexts/AuthContext";
@@ -38,7 +44,8 @@ export function AdminUsersPage() {
 
       {users && (
         <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px] text-sm">
             <thead className="border-b border-gray-100 bg-gray-50">
               <tr>
                 <th className="px-5 py-3 text-left font-medium text-gray-500">Nome</th>
@@ -48,7 +55,7 @@ export function AdminUsersPage() {
                 <th className="px-5 py-3 text-right font-medium text-gray-500">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-100">
               {users.map((u) => (
                 <tr key={u.id} className="hover:bg-gray-50">
                   <td className="px-5 py-4 font-medium text-gray-800">{u.name}</td>
@@ -61,7 +68,7 @@ export function AdminUsersPage() {
                           : "bg-gray-100 text-gray-600"
                       }`}
                     >
-                      {u.role}
+                      {ROLE_LABELS[u.role] ?? u.role}
                     </span>
                   </td>
                   <td className="px-5 py-4 text-center">
@@ -89,6 +96,7 @@ export function AdminUsersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </Layout>

@@ -32,6 +32,9 @@ export interface Room {
   is_active: boolean;
 }
 
+export type BookingStatus = "active" | "cancelled";
+export type UserRole = "MEMBER" | "OWNER" | "SUPER_ADMIN";
+
 export interface Participant {
   id: string;
   email: string;
@@ -45,7 +48,7 @@ export interface Booking {
   user_id: string;
   start_at: string;
   end_at: string;
-  status: string;
+  status: BookingStatus;
   participants: Participant[];
 }
 
@@ -53,7 +56,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
   is_active: boolean;
   created_at: string;
 }
