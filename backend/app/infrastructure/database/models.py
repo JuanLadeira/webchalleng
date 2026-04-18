@@ -115,7 +115,9 @@ class BookingModel(Base):
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[BookingStatusEnum] = mapped_column(
-        Enum(BookingStatusEnum), nullable=False, default=BookingStatusEnum.ACTIVE
+        Enum(BookingStatusEnum, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=BookingStatusEnum.ACTIVE,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -167,7 +169,9 @@ class OutboxEventModel(Base):
     )
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     status: Mapped[OutboxStatusEnum] = mapped_column(
-        Enum(OutboxStatusEnum), nullable=False, default=OutboxStatusEnum.PENDING
+        Enum(OutboxStatusEnum, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=OutboxStatusEnum.PENDING,
     )
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=5)

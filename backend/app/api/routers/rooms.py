@@ -1,10 +1,14 @@
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import CurrentUser
+from app.application.schemas.booking import BookingOut
 from app.application.schemas.room import RoomCreate, RoomOut, RoomUpdate
+from app.application.services.booking_service import BookingService
 from app.application.services.room_service import RoomServiceDep
+from app.infrastructure.database.session import get_db
 
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 
@@ -34,3 +38,15 @@ async def update_room(
 @router.delete("/{room_id}", status_code=204)
 async def delete_room(room_id: UUID, service: RoomServiceDep, _: CurrentUser):
     await service.delete(room_id)
+
+
+@router.get("/{room_id}/bookings", response_model=list[BookingOut])
+async def list_room_bookings(
+    room_id: UUID,
+    _: CurrentUser,
+    session: AsyncSession = Depends(get_db),
+) -> list[BookingOut]:
+    svc = BookingService(session)
+    bookings = await svc.repo.list_by_room(room_id)
+    from app.application.services.booking_service import _to_out
+    return [_to_out(b) for b in bookings]
