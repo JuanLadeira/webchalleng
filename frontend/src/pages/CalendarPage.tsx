@@ -11,8 +11,10 @@ import { useSearchParams } from "react-router-dom";
 import { bookingsApi, type Booking } from "../api/client";
 import { Layout } from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
-import { Toast, useToast } from "../components/Toast";
+import { useToastContext } from "../contexts/ToastContext";
+import { DetailModal } from "../components/DetailModal";
 import { BookingModal } from "../components/BookingModal";
+import "../styles/calendar.css";
 
 // Paleta de cores — atribuída de forma estável pelo hash do título
 const PALETTE = [
@@ -24,172 +26,6 @@ function hashColor(str: string): string {
   let h = 0;
   for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
   return PALETTE[Math.abs(h) % PALETTE.length];
-}
-
-// ── Modal de detalhes ───────────────────────────────────────────────────────
-
-interface DetailModalProps {
-  booking: Booking;
-  isOwn: boolean;
-  onClose: () => void;
-  onCancelled: () => void;
-  onEdit?: () => void;
-}
-
-function DetailModal({ booking, isOwn, onClose, onCancelled, onEdit }: DetailModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
-
-  const fmt = (iso: string) =>
-    new Date(iso).toLocaleString("pt-BR", {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-  const duration = () => {
-    const mins = (new Date(booking.end_at).getTime() - new Date(booking.start_at).getTime()) / 60000;
-    if (mins < 60) return `${mins} min`;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m ? `${h}h ${m}min` : `${h}h`;
-  };
-
-  const handleCancel = async () => {
-    setLoading(true);
-    try {
-      await bookingsApi.cancel(booking.id);
-      onCancelled();
-    } catch {
-      setError("Erro ao cancelar. Tente novamente.");
-      setConfirming(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fecha com Escape
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl overflow-hidden">
-        {/* Header colorido */}
-        <div
-          className="px-6 py-5"
-          style={{ backgroundColor: hashColor(booking.title) }}
-        >
-          <div className="flex items-start justify-between">
-            <h3 className="text-lg font-bold text-white leading-tight pr-2">
-              {booking.title}
-            </h3>
-            <button
-              onClick={onClose}
-              className="text-white/70 hover:text-white shrink-0"
-              aria-label="Fechar"
-            >
-              ✕
-            </button>
-          </div>
-          <p className="mt-1 text-sm text-white/80">{duration()}</p>
-        </div>
-
-        {/* Body */}
-        <div className="px-6 py-4 space-y-3">
-          <div className="flex items-start gap-3 text-sm text-gray-700">
-            <span className="mt-0.5 text-gray-400" aria-hidden="true">🕐</span>
-            <div>
-              <p>{fmt(booking.start_at)}</p>
-              <p className="text-gray-500">até {fmt(booking.end_at)}</p>
-            </div>
-          </div>
-
-          {booking.participants.length > 0 && (
-            <div className="flex items-start gap-3 text-sm text-gray-700">
-              <span className="mt-0.5 text-gray-400" aria-hidden="true">👥</span>
-              <p>{booking.participants.map((p) => p.email).join(", ")}</p>
-            </div>
-          )}
-
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-gray-400">•</span>
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                booking.status === "active"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {booking.status === "active" ? "Ativa" : "Cancelada"}
-            </span>
-          </div>
-        </div>
-
-        {error && (
-          <p className="mx-6 mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-            {error}
-          </p>
-        )}
-
-        <div className="flex gap-3 px-6 pb-6">
-          {confirming ? (
-            <>
-              <button
-                onClick={() => setConfirming(false)}
-                className="flex-1 rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-              >
-                Voltar
-              </button>
-              <button
-                onClick={handleCancel}
-                disabled={loading}
-                className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                {loading ? "Cancelando..." : "Confirmar cancelamento"}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={onClose}
-                className="flex-1 rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-              >
-                Fechar
-              </button>
-              {isOwn && booking.status === "active" && (
-                <>
-                  {onEdit && (
-                    <button
-                      onClick={onEdit}
-                      className="flex-1 rounded-lg border border-blue-600 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                    >
-                      Editar
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setConfirming(true)}
-                    className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700"
-                  >
-                    Cancelar
-                  </button>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ── Conteúdo customizado dos eventos ────────────────────────────────────────
@@ -219,8 +55,8 @@ type BookingModalState =
 
 export function CalendarPage() {
   const { user } = useAuth();
+  const { show } = useToastContext();
   const queryClient = useQueryClient();
-  const { toast, show, hide } = useToast();
   const calendarRef = useRef<FullCalendar>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -230,7 +66,6 @@ export function CalendarPage() {
   const [selected, setSelected] = useState<Booking | null>(null);
   const [bookingModal, setBookingModal] = useState<BookingModalState>(null);
 
-  // Carrega reservas do usuário
   const { data: bookings = [] } = useQuery({
     queryKey: ["bookings"],
     queryFn: () => bookingsApi.listMine().then((r) => r.data),
@@ -241,17 +76,11 @@ export function CalendarPage() {
     if (!highlightId || bookings.length === 0) return;
     const booking = bookings.find((b) => b.id === highlightId);
     if (!booking) return;
-
-    if (targetDate) {
-      calendarRef.current?.getApi().gotoDate(targetDate);
-    }
+    if (targetDate) calendarRef.current?.getApi().gotoDate(targetDate);
     setSelected(booking);
-
-    // Limpa os params da URL sem recarregar
     setSearchParams({}, { replace: true });
   }, [highlightId, bookings, targetDate, setSearchParams]);
 
-  // Monta eventos para o FullCalendar
   const events = useMemo(() => bookings.map((b: Booking) => {
     const color = hashColor(b.title);
     const isHighlight = b.id === highlightId;
@@ -274,17 +103,13 @@ export function CalendarPage() {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
 
-  const handleDateSelect = useCallback(
-    (arg: DateSelectArg) => {
-      setBookingModal({ mode: "create", start: toLocal(arg.start), end: toLocal(arg.end) });
-      calendarRef.current?.getApi().unselect();
-    },
-    []
-  );
+  const handleDateSelect = useCallback((arg: DateSelectArg) => {
+    setBookingModal({ mode: "create", start: toLocal(arg.start), end: toLocal(arg.end) });
+    calendarRef.current?.getApi().unselect();
+  }, []);
 
   const handleEventClick = useCallback((arg: EventClickArg) => {
-    const booking: Booking = arg.event.extendedProps.booking;
-    setSelected(booking);
+    setSelected(arg.event.extendedProps.booking as Booking);
   }, []);
 
   const handleEventDrop = useCallback(async (info: EventDropArg) => {
@@ -323,8 +148,6 @@ export function CalendarPage() {
 
   return (
     <Layout>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={hide} />}
-
       {selected && (
         <DetailModal
           booking={selected}
@@ -354,10 +177,7 @@ export function CalendarPage() {
           initialEnd={bookingModal.mode === "create" ? bookingModal.end : undefined}
           booking={bookingModal.mode === "edit" ? bookingModal.booking : undefined}
           onClose={() => setBookingModal(null)}
-          onSuccess={() => {
-            setBookingModal(null);
-            invalidate();
-          }}
+          onSuccess={() => { setBookingModal(null); invalidate(); }}
           showToast={show}
         />
       )}
@@ -366,7 +186,7 @@ export function CalendarPage() {
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-800">Calendário</h2>
-          <p className="mt-0.5 text-sm text-gray-500">
+          <p className="mt-0.5 text-sm text-gray-600">
             Selecione um horário para criar uma reserva
           </p>
         </div>
@@ -378,7 +198,6 @@ export function CalendarPage() {
         </button>
       </div>
 
-      {/* Calendário full width */}
       <div className="rounded-xl border bg-white p-4 shadow-sm" style={{ height: "calc(100vh - 160px)" }}>
         <FullCalendar
           ref={calendarRef}
@@ -406,74 +225,13 @@ export function CalendarPage() {
           select={handleDateSelect}
           eventClick={handleEventClick}
           eventContent={(info) => <EventContent eventInfo={info} />}
-          eventTimeFormat={{
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          }}
+          eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
           nowIndicator={true}
-          businessHours={{
-            daysOfWeek: [1, 2, 3, 4, 5],
-            startTime: "08:00",
-            endTime: "18:00",
-          }}
+          businessHours={{ daysOfWeek: [1, 2, 3, 4, 5], startTime: "08:00", endTime: "18:00" }}
           dayMaxEvents={3}
           moreLinkText={(n) => `+${n} mais`}
         />
       </div>
-
-      <style>{`
-        .fc-event-cancelled { opacity: 0.45; }
-        .fc .fc-button {
-          background: #f3f4f6 !important;
-          border-color: #e5e7eb !important;
-          color: #374151 !important;
-          font-size: 0.8rem !important;
-          padding: 0.3rem 0.75rem !important;
-          border-radius: 0.5rem !important;
-        }
-        .fc .fc-button:hover {
-          background: #e5e7eb !important;
-        }
-        .fc .fc-button-active,
-        .fc .fc-button-primary:not(:disabled):active {
-          background: #3b82f6 !important;
-          border-color: #3b82f6 !important;
-          color: #fff !important;
-        }
-        .fc .fc-today-button {
-          background: #fff !important;
-          border-color: #3b82f6 !important;
-          color: #3b82f6 !important;
-        }
-        .fc .fc-toolbar-title {
-          font-size: 1.1rem !important;
-          font-weight: 700 !important;
-          color: #1f2937 !important;
-        }
-        .fc .fc-col-header-cell {
-          background: #f9fafb;
-          font-weight: 600;
-          font-size: 0.8rem;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: #6b7280;
-        }
-        .fc .fc-timegrid-slot {
-          height: 2.5rem !important;
-        }
-        .fc .fc-highlight {
-          background: #dbeafe !important;
-          border-radius: 0.375rem;
-        }
-        .fc-event {
-          border-radius: 0.375rem !important;
-          cursor: pointer !important;
-        }
-        .fc-daygrid-event {
-          border-radius: 0.25rem !important;
-        }
-      `}</style>
     </Layout>
   );
 }

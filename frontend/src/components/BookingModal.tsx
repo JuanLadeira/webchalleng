@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { bookingsApi, type Booking } from "../api/client";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import { BookingForm } from "./BookingForm";
 import type { BookingFormData } from "./BookingForm";
 import type { ToastType } from "./Toast";
@@ -31,6 +32,9 @@ export function BookingModal({
   showToast,
 }: BookingModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(containerRef);
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
@@ -93,7 +97,12 @@ export function BookingModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden">
+      <div
+        ref={containerRef}
+        className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h3 className="text-lg font-bold text-gray-800">

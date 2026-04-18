@@ -1,8 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { bookingsApi } from "../api/client";
+import { bookingsApi, type Booking } from "../api/client";
 import { Layout } from "../components/Layout";
-import type { Booking } from "../api/client";
+import { DetailModal } from "../components/DetailModal";
+import { BookingModal } from "../components/BookingModal";
+import { SkeletonBookingCard } from "../components/Skeleton";
+import { useToastContext } from "../contexts/ToastContext";
+import { useAuth } from "../contexts/AuthContext";
 
 function formatRange(start: string, end: string) {
   const s = new Date(start);
@@ -41,9 +46,9 @@ function BookingRow({ booking, onClick }: BookingRowProps) {
             <p className="font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">
               {booking.title}
             </p>
-            <p className="mt-0.5 text-sm text-gray-500">{range}</p>
+            <p className="mt-0.5 text-sm text-gray-600">{range}</p>
             {booking.participants.length > 0 && (
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-500">
                 <span aria-hidden="true">👥</span>{" "}
                 {booking.participants.map((p) => p.email).join(", ")}
               </p>
@@ -54,14 +59,12 @@ function BookingRow({ booking, onClick }: BookingRowProps) {
         <div className="flex items-center gap-3">
           <span
             className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              isActive
-                ? "bg-green-100 text-green-700"
-                : "bg-gray-100 text-gray-500"
+              isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
             }`}
           >
             {isActive ? "Ativa" : "Cancelada"}
           </span>
-          <span className="text-gray-300 group-hover:text-blue-400 transition-colors text-sm">
+          <span className="text-gray-300 group-hover:text-blue-400 transition-colors text-sm" aria-hidden="true">
             →
           </span>
         </div>
@@ -70,28 +73,72 @@ function BookingRow({ booking, onClick }: BookingRowProps) {
   );
 }
 
+type BookingModalState =
+  | { mode: "edit"; booking: Booking }
+  | null;
+
 export function MyBookingsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { show } = useToastContext();
+  const queryClient = useQueryClient();
+
+  const [selected, setSelected] = useState<Booking | null>(null);
+  const [bookingModal, setBookingModal] = useState<BookingModalState>(null);
 
   const { data: bookings, isLoading, isError } = useQuery({
     queryKey: ["bookings"],
     queryFn: () => bookingsApi.listMine().then((r) => r.data),
   });
 
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["bookings"] });
+
   const active = bookings?.filter((b) => b.status === "active") ?? [];
   const past = bookings?.filter((b) => b.status !== "active") ?? [];
 
-  const goToCalendar = (booking: Booking) => {
-    navigate(`/calendar?highlight=${booking.id}&date=${booking.start_at.slice(0, 10)}`);
-  };
-
   return (
     <Layout>
+      {selected && (
+        <DetailModal
+          booking={selected}
+          isOwn={selected.user_id === user?.id}
+          onClose={() => setSelected(null)}
+          onNavigate={() => {
+            navigate(`/calendar?highlight=${selected.id}&date=${selected.start_at.slice(0, 10)}`);
+            setSelected(null);
+          }}
+          onEdit={
+            selected.status === "active" && selected.user_id === user?.id
+              ? () => {
+                  const b = selected;
+                  setSelected(null);
+                  setBookingModal({ mode: "edit", booking: b });
+                }
+              : undefined
+          }
+          onCancelled={() => {
+            setSelected(null);
+            invalidate();
+            show("Reserva cancelada.", "success");
+          }}
+        />
+      )}
+
+      {bookingModal && (
+        <BookingModal
+          mode="edit"
+          booking={bookingModal.booking}
+          onClose={() => setBookingModal(null)}
+          onSuccess={() => { setBookingModal(null); invalidate(); }}
+          showToast={show}
+        />
+      )}
+
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Minhas Reservas</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Clique em uma reserva para ver no calendário
+          <p className="mt-1 text-sm text-gray-600">
+            Clique em uma reserva para ver detalhes, editar ou cancelar
           </p>
         </div>
         <button
@@ -102,11 +149,18 @@ export function MyBookingsPage() {
         </button>
       </div>
 
-      {isLoading && <p className="text-sm text-gray-400">Carregando...</p>}
       {isError && (
         <p role="alert" className="text-sm text-red-500">
           Erro ao carregar reservas.
         </p>
+      )}
+
+      {isLoading && (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonBookingCard key={i} />
+          ))}
+        </div>
       )}
 
       {bookings && (
@@ -117,7 +171,7 @@ export function MyBookingsPage() {
             </h3>
             {active.length === 0 ? (
               <div className="rounded-xl border border-dashed border-gray-200 bg-white py-12 text-center">
-                <p className="text-sm text-gray-400">Nenhuma reserva ativa.</p>
+                <p className="text-sm text-gray-500">Nenhuma reserva ativa.</p>
                 <button
                   onClick={() => navigate("/calendar")}
                   className="mt-2 text-sm text-blue-600 hover:underline"
@@ -128,7 +182,7 @@ export function MyBookingsPage() {
             ) : (
               <ul className="space-y-3">
                 {active.map((b) => (
-                  <BookingRow key={b.id} booking={b} onClick={() => goToCalendar(b)} />
+                  <BookingRow key={b.id} booking={b} onClick={() => setSelected(b)} />
                 ))}
               </ul>
             )}
@@ -141,7 +195,7 @@ export function MyBookingsPage() {
               </h3>
               <ul className="space-y-3">
                 {past.map((b) => (
-                  <BookingRow key={b.id} booking={b} onClick={() => goToCalendar(b)} />
+                  <BookingRow key={b.id} booking={b} onClick={() => setSelected(b)} />
                 ))}
               </ul>
             </section>

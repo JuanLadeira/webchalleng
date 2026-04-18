@@ -32,7 +32,11 @@ function NavItem({ to, label, icon }: NavItemProps) {
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export function Sidebar({ onClose }: SidebarProps = {}) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const isOwner = user?.role === "OWNER" || user?.role === "SUPER_ADMIN";
@@ -43,11 +47,27 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="flex h-screen w-60 flex-col bg-gray-900 px-3 py-5">
+    <aside className="flex h-full w-60 flex-col bg-gray-900 px-3 py-5">
       {/* Logo */}
-      <div className="mb-6 px-3">
-        <h1 className="text-lg font-bold text-white">Meeting Rooms</h1>
-        <p className="text-xs text-gray-500">Gestão de Reservas</p>
+      <div className="mb-6 flex items-center justify-between px-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
+            MR
+          </div>
+          <div>
+            <h1 className="text-sm font-bold leading-tight text-white">Meeting Rooms</h1>
+            <p className="text-xs text-gray-500">Gestão de Reservas</p>
+          </div>
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-gray-400 hover:text-white lg:hidden"
+            aria-label="Fechar menu"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Nav principal */}
@@ -71,7 +91,7 @@ export function Sidebar() {
         </>
       )}
 
-      {/* Usuário + logout — empurrado para o rodapé */}
+      {/* Usuário + logout */}
       <div className="mt-auto border-t border-gray-700 pt-4">
         <div className="mb-2 px-3">
           <p className="text-sm font-medium text-white">{user?.name}</p>

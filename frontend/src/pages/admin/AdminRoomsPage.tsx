@@ -2,12 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { roomsApi } from "../../api/client";
 import { Layout } from "../../components/Layout";
-import { Toast, useToast } from "../../components/Toast";
+import { SkeletonTableRows } from "../../components/Skeleton";
+import { useToastContext } from "../../contexts/ToastContext";
 
 export function AdminRoomsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { toast, show, hide } = useToast();
+  const { show } = useToastContext();
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ["rooms-all"],
@@ -27,12 +28,10 @@ export function AdminRoomsPage() {
 
   return (
     <Layout>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={hide} />}
-
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Gerenciar Salas</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-600">
             Todas as salas do sistema
           </p>
         </div>
@@ -44,11 +43,8 @@ export function AdminRoomsPage() {
         </button>
       </div>
 
-      {isLoading && <p className="text-sm text-gray-400">Carregando...</p>}
-
-      {rooms && (
-        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-          <div className="overflow-x-auto">
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+        <div className="overflow-x-auto">
           <table className="w-full min-w-[600px] text-sm">
             <thead className="border-b border-gray-100 bg-gray-50">
               <tr>
@@ -60,11 +56,12 @@ export function AdminRoomsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {rooms.map((room) => (
+              {isLoading && <SkeletonTableRows cols={5} rows={4} />}
+              {rooms?.map((room) => (
                 <tr key={room.id} className="hover:bg-gray-50">
                   <td className="px-5 py-4 font-medium text-gray-800">{room.name}</td>
-                  <td className="px-5 py-4 text-gray-500">{room.location}</td>
-                  <td className="px-5 py-4 text-center text-gray-500">{room.capacity}</td>
+                  <td className="px-5 py-4 text-gray-600">{room.location}</td>
+                  <td className="px-5 py-4 text-center text-gray-600">{room.capacity}</td>
                   <td className="px-5 py-4 text-center">
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -94,9 +91,8 @@ export function AdminRoomsPage() {
               ))}
             </tbody>
           </table>
-          </div>
         </div>
-      )}
+      </div>
     </Layout>
   );
 }

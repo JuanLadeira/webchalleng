@@ -16,17 +16,17 @@ Nenhum dos três campos (Nome, E-mail, Senha) associava `<label>` ao `<input>`. 
 
 ---
 
-### 🔲 [UI-02] Modal sem focus trap
+### ✅ [UI-02] Modal sem focus trap
 **Arquivo:** `frontend/src/pages/CalendarPage.tsx` (DetailModal, BookingModal)
 Quando o modal abre, o foco não é movido para dentro dele. Usuários de teclado continuam interagindo com o calendário por trás do overlay.
-**Fix sugerido:** `autoFocus` no primeiro campo + ciclo Tab/Shift+Tab dentro do modal, ou usar `focus-trap-react`.
+**Fix aplicado (6c):** `useFocusTrap` hook em `BookingModal` e `DetailModal` — foca o primeiro elemento ao abrir, cicla Tab/Shift+Tab dentro do container.
 
 ---
 
-### 🔲 [UI-03] Sidebar sem responsividade
+### ✅ [UI-03] Sidebar sem responsividade
 **Arquivo:** `frontend/src/components/Layout.tsx`, `Sidebar.tsx`
 `w-60` fixo. Em iPhone SE (375px), a sidebar ocupa 240px e o conteúdo fica com 135px — inutilizável.
-**Fix sugerido:** Sidebar vira drawer em mobile com overlay + botão `☰` no topo do `<main>`.
+**Fix aplicado (6c):** Layout.tsx com estado `open` — sidebar é drawer fixo no mobile com overlay escuro e botão `☰`. No desktop (≥ lg) permanece no flow normal.
 
 ---
 
@@ -37,7 +37,7 @@ Quando o modal abre, o foco não é movido para dentro dele. Usuários de teclad
 
 ---
 
-### 🔲 [FE-01] Sem `ErrorBoundary` na aplicação
+### ✅ [FE-01] Sem `ErrorBoundary` na aplicação
 **Arquivo:** `frontend/src/App.tsx`
 Qualquer erro não tratado em qualquer página derruba toda a árvore React sem fallback.
 **Fix sugerido:** Criar `components/ErrorBoundary.tsx` e envolver `<App>` ou as rotas principais.
@@ -53,21 +53,21 @@ Qualquer erro não tratado em qualquer página derruba toda a árvore React sem 
 
 ---
 
-### 🔲 [UI-06] 2 cliques para ver detalhe em MyBookingsPage
+### ✅ [UI-06] 2 cliques para ver detalhe em MyBookingsPage
 **Arquivo:** `frontend/src/pages/MyBookingsPage.tsx`
 Para ver/cancelar uma reserva o usuário navega ao calendário e clica novamente.
 **Fix sugerido:** Reutilizar `DetailModal` diretamente na `MyBookingsPage` com link "Ver no calendário" como ação secundária.
 
 ---
 
-### 🔲 [UI-07] Loading sem skeleton — layout shift visível
+### ✅ [UI-07] Loading sem skeleton — layout shift visível
 **Arquivo:** `MyBookingsPage.tsx`, `AdminRoomsPage.tsx`, `AdminUsersPage.tsx`
 Texto `"Carregando..."` desaparece abruptamente quando dados chegam.
 **Fix sugerido:** Componentes `Skeleton` com `animate-pulse` para cada seção.
 
 ---
 
-### 🔲 [UI-08] Toggle de role sem confirmação
+### ✅ [UI-08] Toggle de role sem confirmação
 **Arquivo:** `frontend/src/pages/admin/AdminUsersPage.tsx`
 Um clique acidental promove ou rebaixa um usuário sem aviso.
 **Fix sugerido:** Modal de confirmação com nome do usuário e mudança explícita, ou select de role com botão de salvar separado.
@@ -81,7 +81,7 @@ Cast manual `(err as { response? ... })` silenciava erros de rede.
 
 ---
 
-### 🔲 [FE-03] Interceptor 401 não limpa estado do `AuthContext`
+### ✅ [FE-03] Interceptor 401 não limpa estado do `AuthContext`
 **Arquivo:** `frontend/src/api/client.ts`
 `window.location.href = "/login"` recarrega sem chamar `logout()`. O estado `user` fica obsoleto.
 **Fix sugerido:** Disparar evento `auth:logout` via `window.dispatchEvent` e capturar no `AuthContext`.
@@ -124,7 +124,7 @@ Campo `type="text"` aceitava qualquer string.
 
 ---
 
-### 🔲 [UI-13] Contraste insuficiente em textos de suporte
+### ✅ [UI-13] Contraste insuficiente em textos de suporte
 **Arquivo:** Todos os arquivos — `text-gray-500` em `text-sm`
 `text-gray-500` sobre `bg-white` tem contraste de 4.6:1 — abaixo do mínimo WCAG AA.
 **Fix sugerido:** Substituir `text-gray-500` por `text-gray-600` em textos informativos de suporte.
@@ -150,7 +150,7 @@ O mapeamento rodava em todo re-render.
 
 ---
 
-### 🔲 [FE-08] `DetailModal` chama API diretamente — lógica acoplada à UI
+### ✅ [FE-08] `DetailModal` chama API diretamente — lógica acoplada à UI
 **Arquivo:** `frontend/src/pages/CalendarPage.tsx`
 `bookingsApi.cancel` é chamado dentro do componente de modal.
 **Fix sugerido:** Extrair `useCancelBooking` hook com `useMutation`.
@@ -180,28 +180,28 @@ Linha divisória imperceptível.
 
 ---
 
-### 🔲 [UI-16] Logo da sidebar sem identidade visual
+### ✅ [UI-16] Logo da sidebar sem identidade visual
 **Arquivo:** `frontend/src/components/Sidebar.tsx`
 `text-lg` para o nome é fraco como âncora visual.
 **Fix sugerido:** Avatar com iniciais `"MR"` em `bg-blue-600` ao lado do nome.
 
 ---
 
-### 🔲 [FE-10] Rotas admin sem lazy loading
+### ✅ [FE-10] Rotas admin sem lazy loading
 **Arquivo:** `frontend/src/App.tsx`
 `AdminRoomsPage` e `AdminUsersPage` estão no bundle inicial mesmo para `MEMBER`.
 **Fix sugerido:** `React.lazy` + `<Suspense>` nas rotas `/admin/*`.
 
 ---
 
-### 🔲 [FE-11] Bloco `<style>` do FullCalendar no render
+### ✅ [FE-11] Bloco `<style>` do FullCalendar no render
 **Arquivo:** `frontend/src/pages/CalendarPage.tsx`
 CSS global re-injetado a cada render.
 **Fix sugerido:** Mover para `src/styles/calendar.css` e importar uma vez.
 
 ---
 
-### 🔲 [FE-12] `useToast` sem contexto global
+### ✅ [FE-12] `useToast` sem contexto global
 **Arquivo:** `CalendarPage.tsx`, `BookingFormPage.tsx`
 Cada página tem estado de toast isolado.
 **Fix sugerido:** Criar `ToastContext` prover via `<ToastProvider>` no topo da árvore.

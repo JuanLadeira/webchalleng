@@ -35,6 +35,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
+  // Limpa o estado quando o interceptor detecta 401
+  useEffect(() => {
+    const handle = () => setUser(null);
+    window.addEventListener("auth:logout", handle);
+    return () => window.removeEventListener("auth:logout", handle);
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const { data } = await authApi.login(email, password);
     localStorage.setItem("access_token", data.access_token);
