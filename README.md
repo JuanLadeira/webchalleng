@@ -1,6 +1,6 @@
 # Meeting Room Booking
 
-Aplicação fullstack de reservas de salas com notificações assíncronas por e-mail.
+Aplicação fullstack de reservas de salas de reunião com visualização em calendário e notificações assíncronas por e-mail.
 
 ---
 
@@ -12,8 +12,8 @@ Aplicação fullstack de reservas de salas com notificações assíncronas por e
 | Banco | PostgreSQL 16 (btree_gist + EXCLUDE USING gist) |
 | Worker | Celery 5 + Redis |
 | E-mail (dev) | Mailpit |
-| Frontend | React 18 + TypeScript + Vite + Tailwind |
-| Package manager | uv |
+| Frontend | React 18 + TypeScript + Vite + Tailwind CSS + FullCalendar |
+| Package manager | uv (backend) · npm (frontend) |
 | Containers | Docker Compose |
 
 ---
@@ -32,24 +32,32 @@ Aplicação fullstack de reservas de salas com notificações assíncronas por e
 git clone https://github.com/JuanLadeira/webchalleng.git
 cd webchalleng
 
-cp .env.example .env        # ajuste as variáveis se necessário
-make up                     # sobe todos os 7 serviços
+cp .env.example .env   # ajuste as variáveis se necessário
+make up                # sobe todos os serviços
 ```
 
 Aguarde os containers ficarem healthy e acesse:
 
 | Serviço | URL |
 |---|---|
-| API | http://localhost:8000 |
-| Documentação interativa | http://localhost:8000/docs |
 | Frontend | http://localhost:5173 |
+| API | http://localhost:8000 |
+| Swagger UI | http://localhost:8000/docs |
 | Mailpit (e-mails dev) | http://localhost:8025 |
+
+### Usuário administrador (dev)
+
+Na primeira inicialização o `entrypoint.sh` cria automaticamente um usuário OWNER com as credenciais definidas no `.env`:
+
+```env
+SEED_ADMIN_NAME=Admin
+SEED_ADMIN_EMAIL=admin@example.com
+SEED_ADMIN_PASSWORD=admin123
+```
 
 ---
 
 ## Comandos disponíveis (`make`)
-
-Todos os comandos são executados a partir da **raiz do projeto**.
 
 ### Containers
 
@@ -70,10 +78,11 @@ make rollback    # reverte a última migration (alembic downgrade -1)
 ### Testes
 
 ```bash
-make test        # roda todos os testes (precisa do banco rodando)
+make test        # roda todos os testes do backend
 make test-cov    # testes com relatório de cobertura
 make test-unit   # só testes unitários (sem banco)
 make test-int    # só testes de integração
+make test-fe     # roda testes do frontend (vitest)
 ```
 
 ### Qualidade de código
@@ -82,13 +91,6 @@ make test-int    # só testes de integração
 make lint        # verifica erros de estilo com ruff
 make fmt         # formata o código automaticamente
 make fmt-check   # checa formatação sem alterar arquivos
-```
-
-### Outros
-
-```bash
-make install     # instala dependências de dev (uv sync --extra dev)
-make help        # lista todos os comandos com descrição
 ```
 
 ---
@@ -104,16 +106,82 @@ Copie `.env.example` para `.env` e ajuste conforme necessário.
 | `POSTGRES_DB` | `meetings` | Nome do banco |
 | `POSTGRES_HOST` | `db` | Host do banco (`localhost` fora do Docker) |
 | `POSTGRES_PORT` | `5432` | Porta do banco |
-| `REDIS_HOST` | `redis` | Host do Redis (`localhost` fora do Docker) |
+| `REDIS_HOST` | `redis` | Host do Redis |
 | `REDIS_PORT` | `6379` | Porta do Redis |
-| `JWT_SECRET_KEY` | `change-me` | Chave secreta para assinar tokens JWT |
+| `JWT_SECRET_KEY` | `change-me` | Chave secreta para tokens JWT |
 | `JWT_ALGORITHM` | `HS256` | Algoritmo JWT |
 | `JWT_EXPIRATION_MINUTES` | `60` | Validade do token em minutos |
 | `SMTP_HOST` | `mailpit` | Host SMTP |
 | `SMTP_PORT` | `1025` | Porta SMTP |
-| `SMTP_FROM` | `noreply@...` | Remetente dos e-mails |
+| `SMTP_FROM` | `noreply@meetingrooms.local` | Remetente dos e-mails |
 | `SMTP_TLS` | `false` | TLS no SMTP (true em produção) |
 | `OUTBOX_POLL_INTERVAL_SECONDS` | `10` | Intervalo do worker de outbox |
+| `SEED_ADMIN_NAME` | — | Nome do usuário admin criado no seed |
+| `SEED_ADMIN_EMAIL` | — | E-mail do admin (seed idempotente) |
+| `SEED_ADMIN_PASSWORD` | — | Senha do admin |
+
+---
+
+## Funcionalidades
+
+### Calendário
+- Visualização semanal, mensal e diária (estilo Google Calendar)
+- Clicar em um horário vazio → cria reserva com datas pré-preenchidas
+- Clicar em um evento → modal com detalhes e opção de cancelamento
+- Navegação direta do "Minhas Reservas" para o calendário destacando a reserva
+
+### Reservas
+- Criação com título, horário e participantes (e-mail)
+- **Sala criada automaticamente** — não é necessário gerenciar salas manualmente
+- **Recorrência**: diária ou semanal, com número de ocorrências configurável
+- Cancelamento com soft delete
+- Proteção contra conflito de horário em três camadas (ver Arquitetura)
+
+### Administração (role OWNER)
+- Gerenciamento de salas: ativar/desativar
+- Gerenciamento de usuários: alternar role MEMBER ↔ OWNER
+
+---
+
+## Endpoints da API
+
+Documentação completa em http://localhost:8000/docs (Swagger UI).
+
+### Autenticação
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `POST` | `/api/auth/register` | Cria novo usuário |
+| `POST` | `/api/auth/login` | Login — retorna JWT |
+| `GET` | `/api/auth/me` | Dados do usuário autenticado |
+
+### Salas
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/rooms` | Lista salas (param: `active_only`) |
+| `GET` | `/api/rooms/{id}` | Detalhe da sala |
+| `POST` | `/api/rooms` | Cria sala |
+| `PATCH` | `/api/rooms/{id}` | Atualiza sala |
+| `DELETE` | `/api/rooms/{id}` | Desativa sala (soft delete) |
+| `GET` | `/api/rooms/{id}/bookings` | Reservas ativas de uma sala |
+
+### Reservas
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `POST` | `/api/bookings` | Cria reserva (sala criada automaticamente; suporta recorrência) |
+| `GET` | `/api/bookings` | Lista reservas do usuário autenticado |
+| `GET` | `/api/bookings/{id}` | Detalhe da reserva |
+| `PATCH` | `/api/bookings/{id}` | Atualiza reserva |
+| `DELETE` | `/api/bookings/{id}` | Cancela reserva |
+
+### Administração _(requer role OWNER)_
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/admin/users` | Lista todos os usuários |
+| `PATCH` | `/api/admin/users/{id}/role` | Alterna role MEMBER ↔ OWNER |
 
 ---
 
@@ -128,62 +196,13 @@ infrastructure/  ← SQLAlchemy, bcrypt, SMTP, Celery
 api/             ← routers FastAPI + dependencies
 ```
 
-A regra central: dependências sempre apontam para dentro. O `domain/` não importa nada externo e é testável com pytest puro.
+A regra central: dependências sempre apontam para dentro. O `domain/` não importa nada externo.
 
 Documentação detalhada:
 
 - [`docs/architecture.md`](docs/architecture.md) — visão geral, fluxos e topologia de serviços
-- [`docs/clean-architecture.md`](docs/clean-architecture.md) — comparação com MVC, Hexagonal e DDD
-- [`docs/decisions.md`](docs/decisions.md) — decisões técnicas (bcrypt, overlap constraint, outbox)
-- [`docs/schema.dbml`](docs/schema.dbml) — diagrama do banco (dbdiagram.io)
-
----
-
-## Serviços Docker
-
-| Serviço | Imagem | Porta | Função |
-|---|---|---|---|
-| `db` | postgres:16 | 5432 | Banco principal |
-| `redis` | redis:7-alpine | 6379 | Broker Celery |
-| `mailpit` | axllent/mailpit | 1025 / 8025 | SMTP dev + UI |
-| `backend` | build local | 8000 | API FastAPI |
-| `worker` | build local | — | Celery worker (outbox) |
-| `beat` | build local | — | Celery beat (scheduler) |
-| `frontend` | build local | 5173 | React SPA |
-
----
-
-## Endpoints da API
-
-A documentação completa está em http://localhost:8000/docs (Swagger UI).
-
-### Autenticação
-
-| Método | Rota | Descrição |
-|---|---|---|
-| `POST` | `/api/auth/register` | Cria novo usuário |
-| `POST` | `/api/auth/login` | Login — retorna JWT |
-| `GET` | `/api/auth/me` | Dados do usuário autenticado |
-
-### Salas
-
-| Método | Rota | Descrição |
-|---|---|---|
-| `POST` | `/api/rooms` | Cria sala |
-| `GET` | `/api/rooms` | Lista salas ativas |
-| `GET` | `/api/rooms/{id}` | Detalhe da sala |
-| `PATCH` | `/api/rooms/{id}` | Atualiza sala |
-| `DELETE` | `/api/rooms/{id}` | Desativa sala (soft delete) |
-
-### Reservas _(em desenvolvimento — Fase 5)_
-
-| Método | Rota | Descrição |
-|---|---|---|
-| `POST` | `/api/bookings` | Cria reserva |
-| `GET` | `/api/bookings` | Lista reservas do usuário |
-| `GET` | `/api/bookings/{id}` | Detalhe da reserva |
-| `PATCH` | `/api/bookings/{id}` | Atualiza reserva |
-| `DELETE` | `/api/bookings/{id}` | Cancela reserva |
+- [`docs/decisions.md`](docs/decisions.md) — decisões técnicas relevantes
+- [`docs/roadmap.md`](docs/roadmap.md) — fases de desenvolvimento
 
 ---
 
@@ -191,9 +210,9 @@ A documentação completa está em http://localhost:8000/docs (Swagger UI).
 
 Três camadas de proteção:
 
-1. **Validação na application layer** — query de overlap antes de inserir, retorna HTTP 409 com mensagem amigável
+1. **Application layer** — query de overlap antes de inserir, retorna HTTP 409 amigável
 2. **EXCLUDE USING gist no PostgreSQL** — garante atomicidade mesmo sob requisições concorrentes
-3. **Transação atômica** — `booking` + `outbox_event` inseridos juntos; qualquer falha faz rollback completo
+3. **Transação atômica** — `booking` + `outbox_event` inseridos juntos; qualquer falha reverte tudo
 
 ```sql
 EXCLUDE USING gist (
@@ -206,39 +225,55 @@ EXCLUDE USING gist (
 
 ## Notificações por e-mail (Outbox Pattern)
 
-1. Ao criar/editar/cancelar uma reserva, um evento é persistido em `outbox_events` **na mesma transação**
-2. O Celery Beat dispara `process_pending_events` a cada 10 segundos
-3. O worker busca eventos com `SELECT FOR UPDATE SKIP LOCKED` (suporte a múltiplos workers sem duplicação)
-4. Cada evento tem `idempotency_key` UUID único — reprocessamentos são ignorados
+> ⚠️ **Em desenvolvimento (Fase 6)** — a infraestrutura do outbox está completa, mas o worker e o sender SMTP ainda não foram implementados.
 
-Em desenvolvimento, os e-mails são capturados pelo **Mailpit** em http://localhost:8025.
+Fluxo planejado:
+1. Reserva criada/alterada/cancelada → evento persistido em `outbox_events` na mesma transação
+2. Celery Beat dispara `process_pending_events` a cada 10 segundos
+3. Worker busca eventos com `SELECT FOR UPDATE SKIP LOCKED`
+4. Cada evento tem `idempotency_key` UUID único — reprocessamentos são ignorados
+5. E-mail enviado e evento marcado como `processed`
+
+Em desenvolvimento, os e-mails seriam capturados pelo **Mailpit** em http://localhost:8025.
 
 ---
 
 ## Testes
 
 ```
-tests/
-├── unit/               ← domain puro, sem banco (rápido)
-├── integration/        ← API completa com banco de teste
-└── worker/             ← outbox processing + idempotência
+backend/tests/
+├── conftest.py             ← fixtures: engine, db_session, async_client
+├── test_health.py          ← smoke test
+├── unit/
+│   ├── test_booking_validators.py
+│   └── test_domain_rules.py
+├── integration/
+│   ├── test_auth_api.py
+│   ├── test_rooms_api.py
+│   ├── test_bookings_api.py
+│   ├── test_booking_overlap.py
+│   └── test_outbox_creation.py
+└── worker/
+    ├── test_outbox_processing.py
+    └── test_idempotency.py
+
+frontend/src/test/
+├── LoginPage.test.tsx
+├── BookingForm.test.tsx
+└── RoomsPage.test.tsx
 ```
-
-O banco de testes (`test_meetings`) é criado automaticamente no CI. Localmente, basta ter o Docker rodando e executar `make test`.
-
-CI no GitHub Actions: `.github/workflows/backend-tests.yml` — roda a cada push com postgres e redis como services.
 
 ---
 
 ## Progresso do desenvolvimento
 
-| Fase | Branch | Status |
+| Fase | Descrição | Status |
 |---|---|---|
-| 1 — Infraestrutura + CI | `feature-1-architecture-ci` | Concluída |
-| 2 — Domain + Models | `feature-2-domain-models` | Concluída |
-| 3 — Autenticação | `feature-3-auth` | Concluída |
-| 4 — Salas | `feature-4-rooms` | Em andamento |
-| 5 — Reservas | `feature-5-bookings` | Pendente |
-| 6 — Outbox + Worker | `feature-6-outbox-worker` | Pendente |
-| 7 — Frontend | `feature-7-frontend` | Pendente |
-| 8 — Polish + Docs | `feature-8-polish` | Pendente |
+| 1 — Infraestrutura + CI | Docker Compose, Dockerfiles, GitHub Actions | ✅ Concluída |
+| 2 — Domain + Models | Entidades, migrations, validators | ✅ Concluída |
+| 3 — Autenticação | register, login, /me, JWT | ✅ Concluída |
+| 4 — Salas | CRUD de salas | ✅ Concluída |
+| 5 — Reservas | Overlap, outbox transacional, concorrência | ✅ Concluída |
+| 6 — Outbox + Worker | Celery worker + e-mail SMTP | ⚠️ Parcial (infra pronta, worker stub) |
+| 7 — Frontend | React + calendário + admin | ✅ Concluída |
+| 8 — Polish + Docs | README, smoke test, CI 100% verde | 🔄 Em andamento |

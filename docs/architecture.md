@@ -6,28 +6,28 @@ Documento de referência da arquitetura adotada no projeto, cobrindo camadas de 
 
 ## 1. Visão Geral
 
-O sistema é uma aplicação fullstack de reservas de salas de reunião. O backend segue **Clean Architecture**, o frontend é uma SPA em React, e as notificações por e-mail são processadas de forma assíncrona via **Outbox Pattern + Celery Worker**.
+O sistema é uma aplicação fullstack de reservas de reunião com calendário interativo. O backend segue **Clean Architecture**, o frontend é uma SPA em React com FullCalendar, e as notificações por e-mail são processadas de forma assíncrona via **Outbox Pattern + Celery Worker**.
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│                      Browser / SPA                   │
-│                   React 18 + TypeScript               │
+│              Browser / SPA (React 18)                │
+│     Calendário · Reservas · Admin · Auth             │
 └─────────────────────────┬────────────────────────────┘
-                          │ HTTP / JSON (JWT)
+                          │ HTTP / JSON (JWT Bearer)
 ┌─────────────────────────▼────────────────────────────┐
 │                    FastAPI Backend                    │
 │     api/ → application/ → domain/ ← infrastructure/ │
 └──────┬─────────────────────────────┬─────────────────┘
-       │ asyncpg                     │ Redis (Celery broker)
+       │ asyncpg                     │ Redis (broker)
 ┌──────▼──────┐              ┌───────▼───────┐
-│ PostgreSQL  │              │  Celery Worker│
-│   (dados)   │              │  (e-mails)    │
-└──────┬──────┘              └───────┬───────┘
-       │ outbox_events                │ SMTP
-       └──────────────────────────────▼───────┐
-                                     Mailpit  │
-                                   (dev/test) │
-                                              └─
+│ PostgreSQL  │              │ Celery Worker │
+│   (dados)   │◄─outbox─────►│  (e-mails)    │
+└─────────────┘              └───────┬───────┘
+                                     │ SMTP
+                                ┌────▼─────┐
+                                │ Mailpit  │
+                                │ (dev)    │
+                                └──────────┘
 ```
 
 ---
@@ -39,7 +39,7 @@ backend/app/
 ├── domain/              ← Regras de negócio puras (sem framework)
 │   ├── entities/        ← Dataclasses: User, Room, Booking, OutboxEvent
 │   ├── exceptions.py    ← DomainError, OverlapError, InvalidDateError
-│   └── validators.py    ← validate_booking_dates(), validate_duration()
+│   └── validators.py    ← validate_booking(), validate_duration()
 │
 ├── application/         ← Casos de uso (orquestra domain + infra)
 │   ├── interfaces/      ← ABCs dos repositórios (contratos)
@@ -50,47 +50,44 @@ backend/app/
 │   ├── database/        ← SQLAlchemy models + sessão async
 │   ├── repositories/    ← Implementações SQLAlchemy dos ABCs
 │   ├── security/        ← JWT (python-jose) + bcrypt
-│   └── email/           ← SMTP sender via aiosmtplib
+│   └── email/           ← SMTP sender (Fase 6 — pendente)
 │
 ├── api/                 ← Camada HTTP (FastAPI)
-│   ├── routers/         ← Endpoints (auth, rooms, bookings)
-│   └── dependencies.py  ← get_current_user, CurrentUser, get_db
+│   ├── routers/         ← auth, rooms, bookings, admin
+│   └── dependencies.py  ← get_current_user, CurrentUser, OwnerUser, get_db
 │
-└── worker/              ← Celery app + tasks (processamento de outbox)
+├── worker/              ← Celery app + tasks
+└── scripts/             ← seed_admin.py (criado no entrypoint)
 ```
 
 ### Regra de dependência
 
-As setas de dependência apontam **para dentro**:
-
 ```
 api/ ──→ application/ ──→ domain/
-              │
-infrastructure/ ──→ application/  (implementa interfaces)
+              ▲
+infrastructure/ (implementa as interfaces de application/)
 ```
 
-O `domain/` não importa nada externo — é testável com pytest puro, sem banco de dados nem FastAPI.
+O `domain/` não importa nada externo — é testável com pytest puro, sem banco nem FastAPI.
 
 ---
 
 ## 3. Topologia de Serviços (Docker Compose)
 
-| Serviço    | Imagem / Build              | Porta   | Função                                          |
-|------------|-----------------------------|---------|-------------------------------------------------|
-| `db`       | postgres:16                 | 5432    | Banco de dados principal                        |
-| `redis`    | redis:7-alpine              | 6379    | Broker do Celery + cache de resultados          |
-| `mailpit`  | axllent/mailpit             | 1025/8025 | SMTP local para dev (UI em :8025)             |
-| `backend`  | compose/development/backend | 8000    | API FastAPI + Alembic migrations on startup     |
-| `worker`   | compose/development/worker  | —       | Celery worker (processa outbox_events)          |
-| `beat`     | compose/development/worker  | —       | Celery beat (agenda a task a cada 10s)          |
-| `frontend` | compose/development/frontend| 5173    | Vite dev server (React SPA)                     |
+| Serviço | Imagem / Build | Porta | Função |
+|---|---|---|---|
+| `db` | postgres:16 | 5432 | Banco de dados principal |
+| `redis` | redis:7-alpine | 6379 | Broker Celery + cache de resultados |
+| `mailpit` | axllent/mailpit | 1025 / 8025 | SMTP local para dev (UI em :8025) |
+| `backend` | compose/development/backend | 8000 | API FastAPI · migrations · seed admin |
+| `worker` | compose/development/worker | — | Celery worker (processa outbox_events) |
+| `beat` | compose/development/worker | — | Celery beat (agenda task a cada 10s) |
+| `frontend` | compose/development/frontend | 5173 | Vite dev server (React SPA) |
 
-### Dependências de inicialização
+### Startup do backend (`entrypoint.sh`)
 
 ```
-db ──→ backend ──→ worker
-   └──→ redis  ──→ beat
-mailpit ──→ worker
+alembic upgrade head  →  python -m app.scripts.seed_admin  →  uvicorn
 ```
 
 ---
@@ -102,14 +99,14 @@ users
   id (UUID PK)
   email (UNIQUE)
   name
-  hashed_password
+  password_hash
   role (OWNER | MEMBER)
   is_active
-  created_at
+  created_at · updated_at
 
 rooms
   id (UUID PK)
-  name (UNIQUE)
+  name (UNIQUE)        ← auto-gerado internamente: "booking-<uuid>"
   capacity
   location
   description
@@ -118,67 +115,63 @@ rooms
 
 bookings
   id (UUID PK)
-  room_id (FK rooms)
-  organizer_id (FK users)
+  room_id (FK rooms)   ← uma sala por reserva, criada automaticamente
+  user_id (FK users)   ← organizador
   title
   start_at (timestamptz)
   end_at (timestamptz)
-  status (active | canceled)
-  created_at
-  updated_at
-  ── EXCLUDE USING gist (room_id WITH =, tstzrange(start_at, end_at) WITH &&)
-     WHERE (status = 'active')   ← garante no-overlap no banco
+  status (active | cancelled)
+  created_at · updated_at
+  ── EXCLUDE USING gist (room_id WITH =, tstzrange(start_at, end_at, '[)') WITH &&)
+     WHERE (status = 'active')
 
 booking_participants
+  id (UUID PK)
   booking_id (FK bookings)
-  user_id (FK users)
-  ── PK composta (booking_id, user_id)
+  email
+  name (nullable)
 
 outbox_events
   id (UUID PK)
   event_type (BOOKING_CREATED | BOOKING_UPDATED | BOOKING_CANCELED)
+  booking_id (FK bookings)
   payload (JSONB)
   status (pending | processed | failed)
   idempotency_key (UUID UNIQUE)
-  attempts
-  max_attempts
-  created_at
-  processed_at
+  attempts · max_attempts
+  created_at · processed_at
 ```
 
-Diagrama completo em DBML: [`docs/schema.dbml`](./schema.dbml)
+> **Salas são transparentes ao usuário.** Cada reserva (ou série recorrente) cria automaticamente uma sala com nome interno `booking-<uuid>`. O utilizador apenas vê título, horário e participantes.
 
 ---
 
 ## 5. Fluxo: Criação de Reserva
 
 ```
-POST /api/bookings
+POST /api/bookings  { title, start_at, end_at, participant_emails,
+                      recurrence, recurrence_count }
        │
        ▼
 BookingService.create()
-  1. validate_booking_dates()   ← domain/validators.py
-  2. validate_duration()
-  3. overlap_check query        ← app layer (retorna 409 amigável)
-  ── BEGIN TRANSACTION ──────────────────────────────
-  4. INSERT bookings
-  5. INSERT outbox_events (BOOKING_CREATED, pending)
-  ── COMMIT ─────────────────────────────────────────
+  1. validate_booking_dates()        ← domain/validators.py
+  ── BEGIN TRANSACTION ──────────────────────────────────────
+  2. INSERT rooms (nome auto "booking-<uuid>")
+  3. Para cada ocorrência (1 ou N se recorrente):
+       INSERT bookings
+       INSERT outbox_events (BOOKING_CREATED, pending)
+  ── COMMIT ─────────────────────────────────────────────────
        │
-       ▼                        (assíncrono, ~10s depois)
-Celery Beat agenda process_pending_events
-       │
-       ▼
-OutboxRepository.get_pending()  ← SELECT FOR UPDATE SKIP LOCKED
-       │
-       ▼
-SMTPSender.send()               ← aiosmtplib → Mailpit (dev) / SMTP real (prod)
-       │
-       ▼
-outbox_event.status = 'processed'
+       ▼ (assíncrono, ~10s depois — Fase 6 pendente)
+Celery Beat → process_pending_events
+  → OutboxRepository.get_pending()  (SELECT FOR UPDATE SKIP LOCKED)
+  → SMTPSender.send()               (aiosmtplib → Mailpit)
+  → outbox_event.status = 'processed'
 ```
 
-**Por que a transação atômica importa:** se o INSERT no booking falhar, o evento de e-mail também é descartado (rollback). Impossível enviar notificação de uma reserva que não existe.
+### Recorrência
+
+Ao criar com `recurrence: "daily"` ou `"weekly"` e `recurrence_count: N`, são criados N registros de `bookings` todos compartilhando a mesma sala. O endpoint retorna a primeira ocorrência; as demais aparecem automaticamente no calendário.
 
 ---
 
@@ -186,25 +179,23 @@ outbox_event.status = 'processed'
 
 ```
 POST /api/auth/login  (OAuth2PasswordRequestForm)
-       │
-       ▼
-AuthService.login()
-  1. UserRepository.get_by_email()
-  2. bcrypt.checkpw()           ← infrastructure/security/jwt.py
-  3. create_access_token()      ← python-jose, HS256
-       │
-       ▼
-{ access_token, token_type: "bearer" }
+  → AuthService.login()
+      → UserRepository.get_by_email()
+      → bcrypt.checkpw()
+      → create_access_token()  (HS256)
+  ← { access_token, token_type: "bearer" }
 
-── Requisições autenticadas ──────────────────────────
-GET /api/auth/me
+Requisições autenticadas:
   Authorization: Bearer <token>
-       │
-       ▼
-get_current_user() dependency    ← api/dependencies.py
-  1. decode_access_token()
-  2. UserRepository.get_by_id()
-  3. injeta User nas rotas protegidas
+  → get_current_user()  (api/dependencies.py)
+      → decode_access_token()
+      → UserRepository.get_by_id()
+      → injeta UserModel nas rotas
+
+Rotas OWNER-only:
+  → require_owner()  (api/dependencies.py)
+      → verifica user.role == "OWNER"
+      → HTTP 403 caso contrário
 ```
 
 ---
@@ -212,66 +203,111 @@ get_current_user() dependency    ← api/dependencies.py
 ## 7. Prevenção de Conflitos de Reserva (3 camadas)
 
 ```
-Requisição A               Requisição B (simultânea)
-     │                           │
-     ▼                           ▼
-overlap_check query         overlap_check query
-  (sem overlap ainda)         (sem overlap ainda, race!)
-     │                           │
-     ▼                           ▼
-INSERT booking A            INSERT booking B
-     │                           │
-     ▼                           ▼
-COMMIT ✓               EXCLUSION VIOLATION ✗
-                        → asyncpg lança ExclusionViolationError
-                        → handler converte em HTTP 409
+Requisição A                  Requisição B (simultânea)
+     │                               │
+     ▼                               ▼
+overlap_check query            overlap_check query
+  (sem overlap ainda)            (sem overlap ainda — race!)
+     │                               │
+     ▼                               ▼
+INSERT booking A               INSERT booking B
+     │                               │
+     ▼                               ▼
+COMMIT ✓                  EXCLUSION VIOLATION ✗
+                           asyncpg.ExclusionViolationError
+                           → handler converte em HTTP 409
 ```
 
-Detalhes na [`docs/decisions.md`](./decisions.md#2-estratégia-de-concorrência-para-reservas).
+Como cada reserva tem sua própria sala auto-criada, a exclusion constraint atua principalmente para proteger **séries recorrentes** (múltiplas ocorrências na mesma sala) contra sobreposição acidental.
 
 ---
 
-## 8. Estratégia de Branches
+## 8. Frontend (React SPA)
+
+```
+frontend/src/
+├── api/client.ts          ← axios + interceptors JWT
+├── contexts/
+│   └── AuthContext.tsx    ← estado de autenticação global
+├── components/
+│   ├── Layout.tsx         ← Sidebar + área de conteúdo
+│   ├── Sidebar.tsx        ← nav com links por role
+│   ├── BookingForm.tsx    ← formulário de reserva + recorrência
+│   ├── PrivateRoute.tsx   ← redireciona para /login se não autenticado
+│   ├── OwnerRoute.tsx     ← redireciona para /rooms se não for OWNER
+│   └── Toast.tsx          ← notificações in-app
+└── pages/
+    ├── CalendarPage.tsx   ← FullCalendar + modais de criar/detalhe
+    ├── MyBookingsPage.tsx ← lista com link para calendário
+    ├── BookingFormPage.tsx← formulário standalone
+    ├── LoginPage.tsx
+    ├── RegisterPage.tsx
+    └── admin/
+        ├── AdminRoomsPage.tsx
+        └── AdminUsersPage.tsx
+```
+
+### Fluxo do calendário
+
+```
+MyBookingsPage (clica numa reserva)
+  → navigate("/calendar?highlight=<id>&date=<YYYY-MM-DD>")
+       │
+       ▼
+CalendarPage
+  → useQuery(["bookings"])     ← GET /api/bookings
+  → useEffect: lê ?highlight, navega para a data, abre DetailModal
+  → Clicar em slot vazio
+       → navigate("/bookings/new?start=...&end=...")
+       ▼
+BookingFormPage (datas pré-preenchidas)
+  → submit → POST /api/bookings
+  → navigate("/calendar")
+```
+
+---
+
+## 9. Gerenciamento de Sessão SQLAlchemy
+
+O `get_db()` (dependency FastAPI) faz commit automático ao final de cada request bem-sucedido e rollback em caso de exceção:
+
+```python
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+```
+
+Os repositórios usam `session.flush()` para obter IDs gerados pelo banco dentro da transação, sem commitar prematuramente.
+
+---
+
+## 10. Estratégia de Branches
 
 ```
 main
-├── feature-1-architecture-ci     ← infraestrutura + CI verde       ✓ merged
-├── feature-2-domain-models       ← entidades + migrations           ✓ merged
-├── feature-3-auth                ← autenticação + usuários          ✓ merged
-├── feature-4-rooms               ← CRUD de salas
-├── feature-5-bookings            ← reservas + overlap + concorrência
-├── feature-6-outbox-worker       ← Outbox pattern + Celery worker
-├── feature-7-frontend            ← React SPA
-└── feature-8-polish              ← README, smoke test, CI 100%
+├── feature-1-architecture-ci    ← infraestrutura + CI           ✓ merged
+├── feature-2-domain-models      ← entidades + migrations        ✓ merged
+├── feature-3-auth               ← autenticação                  ✓ merged
+├── feature-4-rooms              ← CRUD de salas                 ✓ merged
+├── feature-5-bookings           ← reservas + overlap            ✓ merged
+├── feature-6-outbox-worker      ← worker + e-mail               ⚠ pendente
+├── feature-7-frontend           ← React + calendário + admin    🔄 em aberto
+└── feature-8-polish             ← docs + smoke test             pendente
 ```
-
-Cada branch gera um PR com CI obrigatório verde antes de merge. Roadmap completo: [`docs/roadmap.md`](./roadmap.md)
 
 ---
 
-## 9. Integração dos Apps Existentes
-
-O projeto aproveitou três aplicações FastAPI internas, adaptando-as à clean architecture:
-
-| App original       | O que foi aproveitado                              | Destino no projeto                                   |
-|--------------------|----------------------------------------------------|------------------------------------------------------|
-| `auth/security.py` | `create_access_token`, hash/verify senha           | `infrastructure/security/jwt.py`                     |
-| `auth/current_user.py` | `get_current_user`, `CurrentUser` type alias   | `api/dependencies.py`                                |
-| `auth/router.py`   | login (OAuth2), register, /me                      | `api/routers/auth.py` (simplificado)                 |
-| `usuario/models.py`| estrutura User + role                              | `infrastructure/database/models.py` (UUID pk, sem tenant) |
-| `usuario/services.py` | get_by_email, get_by_id, create              | `infrastructure/repositories/sqlalchemy_user_repo.py` |
-| `tenant/services.py` | padrão `Service(session)` + `ServiceDep`       | todos os services do projeto                         |
-
-**O que foi descartado:** 2FA (totp), rate_limit decorator, forgot/reset password, campos `tenant_id` e `llm_*`, multitenancy (não é requisito do desafio).
-
----
-
-## 10. Estrutura de Testes
+## 11. Estrutura de Testes
 
 ```
-tests/
-├── conftest.py          ← fixtures: engine, db_session, async_client, db_client
-├── test_health.py       ← smoke test da API (CI mínimo)
+backend/tests/
+├── conftest.py                  ← engine, db_session, async_client
+├── test_health.py
 ├── unit/
 │   ├── test_booking_validators.py
 │   └── test_domain_rules.py
@@ -284,6 +320,9 @@ tests/
 └── worker/
     ├── test_outbox_processing.py
     └── test_idempotency.py
-```
 
-O banco de teste (`test_meetings`) é criado automaticamente no CI antes dos testes e usa a mesma migration do banco de produção.
+frontend/src/test/
+├── LoginPage.test.tsx
+├── BookingForm.test.tsx
+└── RoomsPage.test.tsx
+```
