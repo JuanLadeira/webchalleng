@@ -149,8 +149,12 @@ class SQLAlchemyBookingRepository(BookingRepository):
                 )
 
         await self.session.flush()
-        await self.session.refresh(model)
-        return _to_entity(model)
+        result2 = await self.session.execute(
+            select(BookingModel)
+            .where(BookingModel.id == booking_id)
+            .options(selectinload(BookingModel.participants))
+        )
+        return _to_entity(result2.scalar_one())
 
     async def list_by_room(self, room_id: UUID) -> list[Booking]:
         result = await self.session.execute(
