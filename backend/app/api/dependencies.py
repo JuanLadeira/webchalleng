@@ -38,3 +38,12 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[UserModel, Depends(get_current_user)]
+
+
+async def require_owner(user: CurrentUser) -> UserModel:
+    if user.role not in ("OWNER", "SUPER_ADMIN"):
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Acesso restrito a administradores.")  # noqa: E501
+    return user
+
+
+OwnerUser = Annotated[UserModel, Depends(require_owner)]

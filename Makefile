@@ -1,4 +1,5 @@
 BACKEND_DIR := backend
+FRONTEND_DIR := frontend
 
 # ── Containers ────────────────────────────────────────────────────────────────
 .PHONY: up down rebuild logs
@@ -25,7 +26,7 @@ rollback:
 	cd $(BACKEND_DIR) && uv run alembic downgrade -1
 
 # ── Testes ────────────────────────────────────────────────────────────────────
-.PHONY: test test-cov test-unit test-int
+.PHONY: test test-cov test-unit test-int test-fe
 
 # Variáveis para rodar testes localmente (fora do Docker)
 TEST_ENV := POSTGRES_HOST=localhost POSTGRES_PORT=5432 \
@@ -44,6 +45,9 @@ test-unit:
 
 test-int:
 	cd $(BACKEND_DIR) && $(TEST_ENV) uv run pytest tests/integration -v
+
+test-fe:
+	cd $(FRONTEND_DIR) && npm test
 
 # ── Qualidade ─────────────────────────────────────────────────────────────────
 .PHONY: lint fmt fmt-check
@@ -78,10 +82,11 @@ help:
 	@echo "    make rollback   Reverte a última migration"
 	@echo ""
 	@echo "  Testes"
-	@echo "    make test       Roda todos os testes"
+	@echo "    make test       Roda todos os testes do backend"
 	@echo "    make test-cov   Testes com cobertura"
 	@echo "    make test-unit  Só testes unitários"
 	@echo "    make test-int   Só testes de integração"
+	@echo "    make test-fe    Roda testes do frontend (vitest)"
 	@echo ""
 	@echo "  Qualidade"
 	@echo "    make lint       Verifica estilo e erros (ruff)"

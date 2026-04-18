@@ -64,5 +64,10 @@ class Settings(BaseSettings):
     # ── Celery Beat ───────────────────────────────────────────────────────────
     OUTBOX_POLL_INTERVAL_SECONDS: int = 10
 
+    # ── Dev Seed ──────────────────────────────────────────────────────────────
+    SEED_ADMIN_NAME: str = ""
+    SEED_ADMIN_EMAIL: str = ""
+    SEED_ADMIN_PASSWORD: str = ""
+
 
 settings = Settings()

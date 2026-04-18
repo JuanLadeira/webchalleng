@@ -1,7 +1,14 @@
+import enum
 from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, model_validator
+
+
+class RecurrenceType(str, enum.Enum):
+    NONE = "none"
+    DAILY = "daily"
+    WEEKLY = "weekly"
 
 
 class ParticipantOut(BaseModel):
@@ -14,10 +21,11 @@ class ParticipantOut(BaseModel):
 
 class BookingCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
-    room_id: UUID
     start_at: datetime
     end_at: datetime
     participant_emails: list[EmailStr] = Field(default_factory=list)
+    recurrence: RecurrenceType = RecurrenceType.NONE
+    recurrence_count: int = Field(1, ge=1, le=52)
 
     @model_validator(mode="after")
     def validate_dates(self):
