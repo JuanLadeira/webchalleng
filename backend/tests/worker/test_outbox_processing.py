@@ -6,7 +6,7 @@ O banco de teste é usado normalmente via conftest.
 """
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -162,7 +162,7 @@ class TestProcessFunction:
 
         with patch(
             "app.infrastructure.email.smtp_sender.send_email",
-            new_callable=AsyncMock,
+            new_callable=MagicMock,
         ):
             result = await _process_with_session(db_session)
 
@@ -178,7 +178,7 @@ class TestProcessFunction:
 
         with patch(
             "app.infrastructure.email.smtp_sender.send_email",
-            new_callable=AsyncMock,
+            new_callable=MagicMock,
             side_effect=Exception("SMTP down"),
         ):
             result = await _process_with_session(db_session)
