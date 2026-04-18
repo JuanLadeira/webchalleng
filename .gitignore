@@ -32,3 +32,12 @@ dist/
 htmlcov/
 .pytest_cache/
 backend/celerybeat-schedule
+
+# Apps legados (referência local, nunca commitar)
+auth/
+tenant/
+usuario/
+
+# Frontend build artifacts
+frontend/.vite/
+frontend/tsconfig.tsbuildinfo
