@@ -1,3 +1,12 @@
+"""
+Testes de criação e conflito de reservas.
+
+Com o modelo de auto-criação de sala (cada booking gera sua própria Room),
+não existe mais detecção de overlap por sala — múltiplas reservas no mesmo
+horário são válidas pois cada uma ocupa uma sala diferente.
+
+Os testes de 409 foram removidos pois esse comportamento não existe mais.
+"""
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -21,69 +30,61 @@ async def auth_headers(db_client: AsyncClient) -> dict:
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
 
-@pytest.fixture
-async def room_id(db_client: AsyncClient, auth_headers) -> str:
-    resp = await db_client.post(
-        "/api/rooms",
-        json={"name": "Sala Overlap", "capacity": 5, "location": "Térreo"},
-        headers=auth_headers,
-    )
-    return resp.json()["id"]
-
-
-def make_booking(room_id: str, start: datetime, end: datetime) -> dict:
+def make_booking(start: datetime, end: datetime, title: str = "Reunião") -> dict:
     return {
-        "title": "Reunião",
-        "room_id": room_id,
+        "title": title,
         "start_at": start.isoformat(),
         "end_at": end.isoformat(),
     }
 
 
-class TestOverlapDetection:
-    async def test_exact_same_slot_returns_409(
-        self, db_client: AsyncClient, auth_headers, room_id
+class TestBookingCreation:
+    async def test_same_time_slot_allowed_different_rooms(
+        self, db_client: AsyncClient, auth_headers
     ):
+        """Dois bookings no mesmo horário são válidos — salas são independentes."""
         start = NOW + timedelta(days=2, hours=9)
         end = start + timedelta(hours=1)
 
         r1 = await db_client.post(
             "/api/bookings",
-            json=make_booking(room_id, start, end),
+            json=make_booking(start, end, "Reunião A"),
             headers=auth_headers,
         )
         assert r1.status_code == 201
 
         r2 = await db_client.post(
             "/api/bookings",
-            json=make_booking(room_id, start, end),
+            json=make_booking(start, end, "Reunião B"),
             headers=auth_headers,
         )
-        assert r2.status_code == 409
+        assert r2.status_code == 201
 
-    async def test_partial_overlap_returns_409(
-        self, db_client: AsyncClient, auth_headers, room_id
+    async def test_partial_overlap_allowed(
+        self, db_client: AsyncClient, auth_headers
     ):
+        """Reservas com horário parcialmente sobreposto são permitidas (salas distintas)."""
         start = NOW + timedelta(days=2, hours=14)
         end = start + timedelta(hours=2)
 
-        await db_client.post(
+        r1 = await db_client.post(
             "/api/bookings",
-            json=make_booking(room_id, start, end),
+            json=make_booking(start, end, "Reunião principal"),
             headers=auth_headers,
         )
+        assert r1.status_code == 201
 
         overlap_start = start + timedelta(hours=1)
         overlap_end = end + timedelta(hours=1)
         r2 = await db_client.post(
             "/api/bookings",
-            json=make_booking(room_id, overlap_start, overlap_end),
+            json=make_booking(overlap_start, overlap_end, "Reunião paralela"),
             headers=auth_headers,
         )
-        assert r2.status_code == 409
+        assert r2.status_code == 201
 
     async def test_adjacent_slots_are_allowed(
-        self, db_client: AsyncClient, auth_headers, room_id
+        self, db_client: AsyncClient, auth_headers
     ):
         start = NOW + timedelta(days=3, hours=10)
         end = start + timedelta(hours=1)
@@ -92,83 +93,53 @@ class TestOverlapDetection:
 
         r1 = await db_client.post(
             "/api/bookings",
-            json=make_booking(room_id, start, end),
+            json=make_booking(start, end, "Reunião manhã"),
             headers=auth_headers,
         )
         assert r1.status_code == 201
 
         r2 = await db_client.post(
             "/api/bookings",
-            json=make_booking(room_id, next_start, next_end),
+            json=make_booking(next_start, next_end, "Reunião tarde"),
             headers=auth_headers,
         )
         assert r2.status_code == 201
 
-    async def test_different_rooms_no_conflict(
+    async def test_cancelled_booking_followed_by_new_one(
         self, db_client: AsyncClient, auth_headers
-    ):
-        r1 = await db_client.post(
-            "/api/rooms",
-            json={"name": "Sala Overlap A", "capacity": 5, "location": "A"},
-            headers=auth_headers,
-        )
-        r2 = await db_client.post(
-            "/api/rooms",
-            json={"name": "Sala Overlap B", "capacity": 5, "location": "B"},
-            headers=auth_headers,
-        )
-        room_a = r1.json()["id"]
-        room_b = r2.json()["id"]
-
-        start = NOW + timedelta(days=4, hours=9)
-        end = start + timedelta(hours=1)
-
-        b1 = await db_client.post(
-            "/api/bookings",
-            json=make_booking(room_a, start, end),
-            headers=auth_headers,
-        )
-        b2 = await db_client.post(
-            "/api/bookings",
-            json=make_booking(room_b, start, end),
-            headers=auth_headers,
-        )
-        assert b1.status_code == 201
-        assert b2.status_code == 201
-
-    async def test_cancelled_booking_frees_slot(
-        self, db_client: AsyncClient, auth_headers, room_id
     ):
         start = NOW + timedelta(days=5, hours=9)
         end = start + timedelta(hours=1)
 
         b1 = await db_client.post(
             "/api/bookings",
-            json=make_booking(room_id, start, end),
+            json=make_booking(start, end, "Primeira"),
             headers=auth_headers,
         )
+        assert b1.status_code == 201
         booking_id = b1.json()["id"]
 
         await db_client.delete(f"/api/bookings/{booking_id}", headers=auth_headers)
 
         b2 = await db_client.post(
             "/api/bookings",
-            json=make_booking(room_id, start, end),
+            json=make_booking(start, end, "Segunda"),
             headers=auth_headers,
         )
         assert b2.status_code == 201
 
     async def test_update_preserves_own_slot(
-        self, db_client: AsyncClient, auth_headers, room_id
+        self, db_client: AsyncClient, auth_headers
     ):
         start = NOW + timedelta(days=6, hours=9)
         end = start + timedelta(hours=1)
 
         b1 = await db_client.post(
             "/api/bookings",
-            json=make_booking(room_id, start, end),
+            json=make_booking(start, end),
             headers=auth_headers,
         )
+        assert b1.status_code == 201
         booking_id = b1.json()["id"]
 
         response = await db_client.patch(

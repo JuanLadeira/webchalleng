@@ -63,6 +63,6 @@ describe("BookingForm", () => {
 
   it("disables submit button while loading", () => {
     render(<BookingForm onSubmit={vi.fn()} isLoading={true} />);
-    expect(screen.getByRole("button")).toBeDisabled();
+    expect(screen.getByRole("button", { name: /criando/i })).toBeDisabled();
   });
 });
