@@ -7,7 +7,6 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { RoomsPage } from "./pages/RoomsPage";
 import { RoomDetailPage } from "./pages/RoomDetailPage";
 import { RoomFormPage } from "./pages/RoomFormPage";
-import { BookingFormPage } from "./pages/BookingFormPage";
 import { MyBookingsPage } from "./pages/MyBookingsPage";
 import { AdminRoomsPage } from "./pages/admin/AdminRoomsPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
@@ -27,7 +26,7 @@ export default function App() {
           <Route path="/rooms/:id" element={<PrivateRoute><RoomDetailPage /></PrivateRoute>} />
           <Route path="/rooms/new" element={<PrivateRoute><RoomFormPage /></PrivateRoute>} />
           <Route path="/bookings" element={<PrivateRoute><MyBookingsPage /></PrivateRoute>} />
-          <Route path="/bookings/new" element={<PrivateRoute><BookingFormPage /></PrivateRoute>} />
+          <Route path="/bookings/new" element={<Navigate to="/calendar" replace />} />
           <Route path="/calendar" element={<PrivateRoute><CalendarPage /></PrivateRoute>} />
 
           {/* Admin — só OWNER */}

@@ -1,16 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import FullCalendar from "@fullcalendar/react";
-import type { EventClickArg, DateSelectArg, EventContentArg } from "@fullcalendar/core";
+import type { EventClickArg, DateSelectArg, EventContentArg, EventDropArg } from "@fullcalendar/core";
+import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { bookingsApi, type Booking } from "../api/client";
 import { Layout } from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
 import { Toast, useToast } from "../components/Toast";
+import { BookingModal } from "../components/BookingModal";
 
 // Paleta de cores — atribuída de forma estável pelo hash do título
 const PALETTE = [
@@ -31,9 +33,10 @@ interface DetailModalProps {
   isOwn: boolean;
   onClose: () => void;
   onCancelled: () => void;
+  onEdit?: () => void;
 }
 
-function DetailModal({ booking, isOwn, onClose, onCancelled }: DetailModalProps) {
+function DetailModal({ booking, isOwn, onClose, onCancelled, onEdit }: DetailModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -145,13 +148,23 @@ function DetailModal({ booking, isOwn, onClose, onCancelled }: DetailModalProps)
             Fechar
           </button>
           {isOwn && booking.status === "active" && (
-            <button
-              onClick={handleCancel}
-              disabled={loading}
-              className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-            >
-              {loading ? "Cancelando..." : "Cancelar"}
-            </button>
+            <>
+              {onEdit && (
+                <button
+                  onClick={onEdit}
+                  className="flex-1 rounded-lg border border-blue-600 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                >
+                  Editar
+                </button>
+              )}
+              <button
+                onClick={handleCancel}
+                disabled={loading}
+                className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {loading ? "Cancelando..." : "Cancelar"}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -175,13 +188,19 @@ function EventContent({ eventInfo }: { eventInfo: EventContentArg }) {
   );
 }
 
+// ── Tipos do modal de booking ────────────────────────────────────────────────
+
+type BookingModalState =
+  | { mode: "create"; start: string; end: string }
+  | { mode: "edit"; booking: Booking }
+  | null;
+
 // ── Página ──────────────────────────────────────────────────────────────────
 
 export function CalendarPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast, show, hide } = useToast();
-  const navigate = useNavigate();
   const calendarRef = useRef<FullCalendar>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -189,6 +208,7 @@ export function CalendarPage() {
   const targetDate = searchParams.get("date");
 
   const [selected, setSelected] = useState<Booking | null>(null);
+  const [bookingModal, setBookingModal] = useState<BookingModalState>(null);
 
   // Carrega reservas do usuário
   const { data: bookings = [] } = useQuery({
@@ -225,28 +245,57 @@ export function CalendarPage() {
       textColor: "#fff",
       extendedProps: { booking: b },
       classNames: b.status !== "active" ? ["fc-event-cancelled"] : [],
+      editable: b.status === "active" && b.user_id === user?.id,
     };
   });
 
+  const toLocal = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   const handleDateSelect = useCallback(
     (arg: DateSelectArg) => {
-      // Formata para datetime-local (sem segundos, sem Z)
-      const toLocal = (d: Date) => {
-        const pad = (n: number) => String(n).padStart(2, "0");
-        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      };
-      const start = toLocal(arg.start);
-      const end = toLocal(arg.end);
-      navigate(`/bookings/new?start=${start}&end=${end}`);
+      setBookingModal({ mode: "create", start: toLocal(arg.start), end: toLocal(arg.end) });
       calendarRef.current?.getApi().unselect();
     },
-    [navigate]
+    []
   );
 
   const handleEventClick = useCallback((arg: EventClickArg) => {
     const booking: Booking = arg.event.extendedProps.booking;
     setSelected(booking);
   }, []);
+
+  const handleEventDrop = useCallback(async (info: EventDropArg) => {
+    const booking = info.event.extendedProps.booking as Booking;
+    try {
+      await bookingsApi.update(booking.id, {
+        start_at: info.event.start!.toISOString(),
+        end_at: info.event.end!.toISOString(),
+      });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      show("Reserva movida com sucesso!", "success");
+    } catch {
+      info.revert();
+      show("Não foi possível mover a reserva.", "error");
+    }
+  }, [queryClient, show]);
+
+  const handleEventResize = useCallback(async (info: EventResizeDoneArg) => {
+    const booking = info.event.extendedProps.booking as Booking;
+    try {
+      await bookingsApi.update(booking.id, {
+        start_at: info.event.start!.toISOString(),
+        end_at: info.event.end!.toISOString(),
+      });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      show("Reserva ajustada com sucesso!", "success");
+    } catch {
+      info.revert();
+      show("Não foi possível ajustar a reserva.", "error");
+    }
+  }, [queryClient, show]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["bookings"] });
@@ -261,11 +310,35 @@ export function CalendarPage() {
           booking={selected}
           isOwn={selected.user_id === user?.id}
           onClose={() => setSelected(null)}
+          onEdit={
+            selected.status === "active" && selected.user_id === user?.id
+              ? () => {
+                  const b = selected;
+                  setSelected(null);
+                  setBookingModal({ mode: "edit", booking: b });
+                }
+              : undefined
+          }
           onCancelled={() => {
             setSelected(null);
             invalidate();
             show("Reserva cancelada.", "success");
           }}
+        />
+      )}
+
+      {bookingModal && (
+        <BookingModal
+          mode={bookingModal.mode}
+          initialStart={bookingModal.mode === "create" ? bookingModal.start : undefined}
+          initialEnd={bookingModal.mode === "create" ? bookingModal.end : undefined}
+          booking={bookingModal.mode === "edit" ? bookingModal.booking : undefined}
+          onClose={() => setBookingModal(null)}
+          onSuccess={() => {
+            setBookingModal(null);
+            invalidate();
+          }}
+          showToast={show}
         />
       )}
 
@@ -278,7 +351,7 @@ export function CalendarPage() {
           </p>
         </div>
         <button
-          onClick={() => navigate("/bookings/new")}
+          onClick={() => setBookingModal({ mode: "create", start: "", end: "" })}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           + Nova Reserva
@@ -302,6 +375,13 @@ export function CalendarPage() {
           slotLabelInterval="01:00:00"
           selectable={true}
           selectMirror={true}
+          editable={true}
+          eventDrop={handleEventDrop}
+          eventResize={handleEventResize}
+          eventAllow={(_dropInfo, draggedEvent) => {
+            const b = draggedEvent?.extendedProps?.booking as Booking | undefined;
+            return b?.status === "active" && b?.user_id === user?.id;
+          }}
           events={events}
           select={handleDateSelect}
           eventClick={handleEventClick}

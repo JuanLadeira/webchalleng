@@ -21,16 +21,11 @@ export function BookingFormPage() {
     setFormError(null);
     setIsLoading(true);
     try {
-      const emails = data.participant_emails
-        .split(",")
-        .map((e) => e.trim())
-        .filter(Boolean);
-
       await bookingsApi.create({
         title: data.title,
         start_at: new Date(data.start_at).toISOString(),
         end_at: new Date(data.end_at).toISOString(),
-        participant_emails: emails,
+        participant_emails: data.participant_emails,
         recurrence: data.recurrence,
         recurrence_count: data.recurrence_count,
       });

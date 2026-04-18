@@ -31,9 +31,11 @@ describe("BookingForm", () => {
     fireEvent.change(screen.getByLabelText(/fim/i), {
       target: { value: "2025-12-01T10:00" },
     });
-    fireEvent.change(screen.getByLabelText(/participantes/i), {
-      target: { value: "alice@test.com" },
-    });
+
+    // Tag input: type email then press Enter to add it as a chip
+    const emailInput = screen.getByLabelText(/participantes/i);
+    fireEvent.change(emailInput, { target: { value: "alice@test.com" } });
+    fireEvent.keyDown(emailInput, { key: "Enter" });
 
     fireEvent.click(screen.getByRole("button", { name: /reservar/i }));
 
@@ -42,7 +44,7 @@ describe("BookingForm", () => {
         title: "Sprint Review",
         start_at: "2025-12-01T09:00",
         end_at: "2025-12-01T10:00",
-        participant_emails: "alice@test.com",
+        participant_emails: ["alice@test.com"],
         recurrence: "none",
         recurrence_count: 1,
       });
@@ -64,5 +66,24 @@ describe("BookingForm", () => {
   it("disables submit button while loading", () => {
     render(<BookingForm onSubmit={vi.fn()} isLoading={true} />);
     expect(screen.getByRole("button", { name: /criando/i })).toBeDisabled();
+  });
+
+  it("hides recurrence options in edit mode", () => {
+    render(<BookingForm onSubmit={vi.fn()} mode="edit" />);
+    expect(screen.queryByText(/sem repetição/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/diário/i)).not.toBeInTheDocument();
+  });
+
+  it("pre-fills title and emails in edit mode", () => {
+    render(
+      <BookingForm
+        onSubmit={vi.fn()}
+        mode="edit"
+        initialTitle="Reunião Semanal"
+        initialEmails={["bob@example.com"]}
+      />
+    );
+    expect(screen.getByDisplayValue("Reunião Semanal")).toBeInTheDocument();
+    expect(screen.getByText("bob@example.com")).toBeInTheDocument();
   });
 });
