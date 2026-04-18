@@ -1,5 +1,5 @@
 from celery import Celery
-from celery.schedules import crontab  # noqa: F401
+from celery.schedules import timedelta
 
 from app.config import settings
 
@@ -17,9 +17,9 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
     beat_schedule={
-        "process-outbox-every-10s": {
+        "process-outbox-events": {
             "task": "process_pending_events",
-            "schedule": settings.OUTBOX_POLL_INTERVAL_SECONDS,
+            "schedule": timedelta(seconds=settings.OUTBOX_POLL_INTERVAL_SECONDS),
         },
     },
 )

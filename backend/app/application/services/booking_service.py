@@ -1,3 +1,5 @@
+import uuid as _uuid
+from datetime import timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -9,9 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.interfaces.booking_repository import BookingRepository
 from app.application.interfaces.outbox_repository import OutboxRepository
-from app.application.schemas.booking import BookingCreate, BookingOut, BookingUpdate
+from app.application.schemas.booking import BookingCreate, BookingOut, BookingUpdate, RecurrenceType
 from app.domain.entities.booking import Booking
 from app.domain.entities.outbox_event import EventType
+from app.infrastructure.database.models import RoomModel
 from app.infrastructure.database.session import get_db
 from app.infrastructure.repositories.sqlalchemy_booking_repo import (
     SQLAlchemyBookingRepository,
@@ -55,31 +58,41 @@ class BookingService:
         self.outbox: OutboxRepository = SQLAlchemyOutboxRepository(session)
 
     async def create(self, data: BookingCreate, organizer_id: UUID) -> BookingOut:
-        overlap = await self.repo.find_overlap(
-            room_id=data.room_id,
-            start_at=data.start_at,
-            end_at=data.end_at,
-        )
-        if overlap:
-            raise HTTPException(
-                status_code=409,
-                detail="Sala já reservada nesse horário.",
-            )
+        # Cria sala automaticamente para esta reserva (ou série)
+        room = RoomModel(name=f"booking-{_uuid.uuid4()}", capacity=1)
+        self.session.add(room)
+        await self.session.flush()
+        room_id = room.id
 
+        # Calcula ocorrências
+        duration = data.end_at - data.start_at
+        starts = [data.start_at]
+        if data.recurrence == RecurrenceType.DAILY:
+            for i in range(1, data.recurrence_count):
+                starts.append(data.start_at + timedelta(days=i))
+        elif data.recurrence == RecurrenceType.WEEKLY:
+            for i in range(1, data.recurrence_count):
+                starts.append(data.start_at + timedelta(weeks=i))
+
+        first_booking: Booking | None = None
         try:
-            booking = await self.repo.create(
-                title=data.title,
-                room_id=data.room_id,
-                user_id=organizer_id,
-                start_at=data.start_at,
-                end_at=data.end_at,
-                participant_emails=data.participant_emails,
-            )
-            await self.outbox.create(
-                event_type=EventType.BOOKING_CREATED,
-                booking_id=booking.id,
-                payload=_booking_payload(booking),
-            )
+            for start_at in starts:
+                end_at = start_at + duration
+                booking = await self.repo.create(
+                    title=data.title,
+                    room_id=room_id,
+                    user_id=organizer_id,
+                    start_at=start_at,
+                    end_at=end_at,
+                    participant_emails=data.participant_emails,
+                )
+                if first_booking is None:
+                    first_booking = booking
+                await self.outbox.create(
+                    event_type=EventType.BOOKING_CREATED,
+                    booking_id=booking.id,
+                    payload=_booking_payload(booking),
+                )
         except IntegrityError as exc:
             await self.session.rollback()
             if _is_exclusion_violation(exc):
@@ -89,7 +102,7 @@ class BookingService:
                 ) from exc
             raise
 
-        return _to_out(booking)
+        return _to_out(first_booking)  # type: ignore[arg-type]
 
     async def get(self, booking_id: UUID, user_id: UUID) -> BookingOut:
         booking = await self.repo.get_by_id(booking_id)
@@ -178,6 +191,15 @@ def _is_exclusion_violation(exc: IntegrityError) -> bool:
     return isinstance(orig, ExclusionViolationError) or isinstance(
         orig, UniqueViolationError
     )
+
+
+def _is_fk_violation(exc: IntegrityError) -> bool:
+    from asyncpg.exceptions import ForeignKeyViolationError
+
+    orig = getattr(exc, "orig", None)
+    if orig is None:
+        return False
+    return isinstance(orig, ForeignKeyViolationError)
 
 
 async def get_booking_service(session: AsyncSession = Depends(get_db)) -> BookingService:
