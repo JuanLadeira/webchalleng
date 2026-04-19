@@ -57,18 +57,18 @@ export function RoomDetailPage() {
       {toast && <Toast message={toast.message} type={toast.type} onClose={hide} />}
 
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">{room.name}</h2>
-        <p className="text-sm text-gray-500">{room.location}</p>
-        <p className="mt-1 text-sm text-gray-600">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{room.name}</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{room.location}</p>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
           Capacidade: {room.capacity} pessoas
         </p>
         {room.description && (
-          <p className="mt-2 text-sm text-gray-600">{room.description}</p>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{room.description}</p>
         )}
       </div>
 
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-semibold text-gray-700">Minhas reservas nesta sala</h3>
+        <h3 className="font-semibold text-gray-700 dark:text-gray-300">Minhas reservas nesta sala</h3>
         <button
           onClick={() => setShowBookingModal(true)}
           className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"

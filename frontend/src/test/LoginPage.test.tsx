@@ -72,7 +72,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /entrar/i }));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/rooms");
+      expect(mockNavigate).toHaveBeenCalledWith("/calendar");
     });
   });
 

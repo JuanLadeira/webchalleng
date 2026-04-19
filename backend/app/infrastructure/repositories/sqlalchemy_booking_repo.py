@@ -24,6 +24,7 @@ def _to_entity(model: BookingModel) -> Booking:
         end_at=model.end_at,
         status=BookingStatus(model.status.value),
         notes=model.notes,
+        color=model.color,
         created_at=model.created_at,
         updated_at=model.updated_at,
         participants=[
@@ -144,6 +145,8 @@ class SQLAlchemyBookingRepository(BookingRepository):
         end_at: datetime | None,
         participant_emails: list[str] | None,
         notes: str | None = None,
+        color: str | None = None,
+        update_color: bool = False,
     ) -> Booking | None:
         result = await self.session.execute(
             select(BookingModel)
@@ -162,6 +165,8 @@ class SQLAlchemyBookingRepository(BookingRepository):
             model.end_at = end_at
         if notes is not None:
             model.notes = notes
+        if update_color:
+            model.color = color
 
         if participant_emails is not None:
             for p in list(model.participants):

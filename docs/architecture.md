@@ -120,6 +120,8 @@ bookings
   title
   start_at (timestamptz)
   end_at (timestamptz)
+  notes (TEXT nullable)
+  color (VARCHAR(20) nullable)   ← cor customizada no calendário; null = hash automático
   status (active | cancelled)
   created_at · updated_at
   ── EXCLUDE USING gist (room_id WITH =, tstzrange(start_at, end_at, '[)') WITH &&)
@@ -142,7 +144,7 @@ outbox_events
   created_at · processed_at
 ```
 
-> **Salas são transparentes ao usuário.** Cada reserva (ou série recorrente) cria automaticamente uma sala com nome interno `booking-<uuid>`. O utilizador apenas vê título, horário e participantes.
+> **Salas são transparentes ao usuário.** Cada reserva (ou série recorrente) cria automaticamente uma sala com nome interno `"<título> [<uuid8>]"` (garante unicidade mesmo com títulos repetidos). O utilizador apenas vê título, horário e participantes. Salas podem também ser criadas manualmente pelo admin via `RoomFormPage`.
 
 ---
 
@@ -226,44 +228,60 @@ Como cada reserva tem sua própria sala auto-criada, a exclusion constraint atua
 
 ```
 frontend/src/
-├── api/client.ts          ← axios + interceptors JWT
+├── api/client.ts             ← axios + interceptors JWT (sessionStorage)
 ├── contexts/
-│   └── AuthContext.tsx    ← estado de autenticação global
+│   ├── AuthContext.tsx        ← autenticação global; token em sessionStorage
+│   ├── ThemeContext.tsx       ← tema claro/escuro; persiste em sessionStorage
+│   └── ToastContext.tsx       ← notificações globais
+├── hooks/
+│   └── useFocusTrap.tsx       ← acessibilidade: foco dentro de modais
 ├── components/
-│   ├── Layout.tsx         ← Sidebar + área de conteúdo
-│   ├── Sidebar.tsx        ← nav com links por role
-│   ├── BookingForm.tsx    ← formulário de reserva + recorrência
-│   ├── PrivateRoute.tsx   ← redireciona para /login se não autenticado
-│   ├── OwnerRoute.tsx     ← redireciona para /rooms se não for OWNER
-│   └── Toast.tsx          ← notificações in-app
+│   ├── Layout.tsx             ← Sidebar (drawer mobile) + área de conteúdo
+│   ├── Sidebar.tsx            ← nav por role + toggle de tema ☀️/🌙
+│   ├── BookingForm.tsx        ← formulário de reserva: recorrência, tag input
+│   │                             de e-mails, color picker (modo edit)
+│   ├── BookingModal.tsx       ← modal criar/editar reserva + confirmação passado
+│   ├── BookingList.tsx        ← lista de reservas com ações inline
+│   ├── DetailModal.tsx        ← detalhe de reserva com confirmação de cancelamento
+│   ├── RoomCard.tsx           ← card de sala para RoomsPage
+│   ├── Skeleton.tsx           ← loading placeholders com animate-pulse
+│   ├── ErrorBoundary.tsx      ← fallback para erros React não tratados
+│   ├── PrivateRoute.tsx       ← redireciona para /login se não autenticado
+│   ├── OwnerRoute.tsx         ← redireciona para /rooms se não for OWNER
+│   └── Toast.tsx              ← notificações in-app
 └── pages/
-    ├── CalendarPage.tsx   ← FullCalendar + modais de criar/detalhe
-    ├── MyBookingsPage.tsx ← lista com link para calendário
-    ├── BookingFormPage.tsx← formulário standalone
+    ├── CalendarPage.tsx       ← FullCalendar + DnD/resize + painel ⚙️ configurações
+    ├── MyBookingsPage.tsx     ← lista com DetailModal inline + link para calendário
+    ├── RoomsPage.tsx          ← listagem de salas disponíveis
+    ├── RoomDetailPage.tsx     ← detalhe da sala + BookingModal inline
+    ├── RoomFormPage.tsx       ← criação manual de sala (admin/OWNER)
     ├── LoginPage.tsx
     ├── RegisterPage.tsx
     └── admin/
-        ├── AdminRoomsPage.tsx
-        └── AdminUsersPage.tsx
+        ├── AdminRoomsPage.tsx ← ativar/desativar salas
+        └── AdminUsersPage.tsx ← toggle de role com confirmação inline
 ```
 
 ### Fluxo do calendário
 
 ```
 MyBookingsPage (clica numa reserva)
+  → DetailModal abre inline
+  → botão "Ver no calendário"
   → navigate("/calendar?highlight=<id>&date=<YYYY-MM-DD>")
        │
        ▼
 CalendarPage
   → useQuery(["bookings"])     ← GET /api/bookings
   → useEffect: lê ?highlight, navega para a data, abre DetailModal
-  → Clicar em slot vazio
-       → navigate("/bookings/new?start=...&end=...")
-       ▼
-BookingFormPage (datas pré-preenchidas)
-  → submit → POST /api/bookings
-  → navigate("/calendar")
+  → Clicar em slot vazio → BookingModal (create)
+  → Clicar em evento    → DetailModal → botão Editar → BookingModal (edit)
+  → Drag & Drop / resize → PATCH /api/bookings/{id} { start_at, end_at }
 ```
+
+### Configurações do calendário
+
+Painel ⚙️ acessível no header do `CalendarPage`. Configurações salvas em `sessionStorage["calendarSettings"]`: range de horas visíveis, tamanho do slot, horário comercial, máx. eventos/dia (visão mês), toggle de finais de semana.
 
 ---
 
@@ -290,14 +308,15 @@ Os repositórios usam `session.flush()` para obter IDs gerados pelo banco dentro
 
 ```
 main
-├── feature-1-architecture-ci    ← infraestrutura + CI           ✓ merged
-├── feature-2-domain-models      ← entidades + migrations        ✓ merged
-├── feature-3-auth               ← autenticação                  ✓ merged
-├── feature-4-rooms              ← CRUD de salas                 ✓ merged
-├── feature-5-bookings           ← reservas + overlap            ✓ merged
-├── feature-6-outbox-worker      ← worker + e-mail               ⚠ pendente
-├── feature-7-frontend           ← React + calendário + admin    🔄 em aberto
-└── feature-8-polish             ← docs + smoke test             pendente
+├── feature-1-architecture-ci       ← infraestrutura + CI           ✓ merged
+├── feature-2-domain-models         ← entidades + migrations        ✓ merged
+├── feature-3-auth                  ← autenticação                  ✓ merged
+├── feature-4-rooms                 ← CRUD de salas                 ✓ merged
+├── feature-5-bookings              ← reservas + overlap            ✓ merged
+├── feature-6-outbox-worker         ← worker + e-mail               ✓ merged (PR #8)
+├── feature-6c-booking-modal-dnd    ← modal, DnD, UX polish         ✓ merged (PR #9)
+├── feature-dark-mode               ← dark mode + cor de reserva    🔄 em progresso
+└── feature-8-polish                ← docs + smoke test             pendente
 ```
 
 ---

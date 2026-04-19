@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RoomsPage } from "../pages/RoomsPage";
 import { AuthContext } from "../contexts/AuthContext";
+import { ThemeProvider } from "../contexts/ThemeContext";
 import type { User } from "../api/client";
 
 vi.mock("../api/client", async () => {
@@ -47,21 +48,23 @@ function renderRooms() {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <AuthContext.Provider
-          value={{
-            user: mockUser,
-            isLoading: false,
-            login: vi.fn(),
-            register: vi.fn(),
-            logout: vi.fn(),
-          }}
-        >
-          <RoomsPage />
-        </AuthContext.Provider>
-      </MemoryRouter>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <AuthContext.Provider
+            value={{
+              user: mockUser,
+              isLoading: false,
+              login: vi.fn(),
+              register: vi.fn(),
+              logout: vi.fn(),
+            }}
+          >
+            <RoomsPage />
+          </AuthContext.Provider>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

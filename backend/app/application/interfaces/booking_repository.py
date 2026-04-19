@@ -39,6 +39,7 @@ class BookingRepository(ABC):
         start_at: datetime,
         end_at: datetime,
         participant_emails: list[str],
+        notes: str | None = None,
     ) -> Booking: ...
 
     @abstractmethod
@@ -49,6 +50,9 @@ class BookingRepository(ABC):
         start_at: datetime | None,
         end_at: datetime | None,
         participant_emails: list[str] | None,
+        notes: str | None = None,
+        color: str | None = None,
+        update_color: bool = False,
     ) -> Booking | None: ...
 
     @abstractmethod

@@ -47,6 +47,7 @@ class BookingUpdate(BaseModel):
     end_at: datetime | None = None
     participant_emails: list[EmailStr] | None = None
     notes: str | None = Field(None, max_length=2000)
+    color: str | None = Field(None, max_length=20)
 
     @model_validator(mode="after")
     def validate_dates_if_present(self):
@@ -70,6 +71,7 @@ class BookingOut(BaseModel):
     end_at: datetime
     status: str
     notes: str | None
+    color: str | None
     participants: list[ParticipantOut]
 
     model_config = {"from_attributes": True}

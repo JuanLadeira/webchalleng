@@ -17,8 +17,8 @@ export function RoomsPage() {
     <Layout>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Salas disponíveis</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Salas disponíveis</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Selecione uma sala para ver detalhes e fazer uma reserva
           </p>
         </div>
@@ -41,8 +41,8 @@ export function RoomsPage() {
       )}
 
       {!isLoading && !isError && activeRooms.length === 0 && (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center">
-          <p className="text-gray-400">Nenhuma sala cadastrada.</p>
+        <div className="rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center dark:border-gray-700 dark:bg-gray-900">
+          <p className="text-gray-400 dark:text-gray-500">Nenhuma sala cadastrada.</p>
           <button
             onClick={() => navigate("/rooms/new")}
             className="mt-3 text-sm text-blue-600 hover:underline"

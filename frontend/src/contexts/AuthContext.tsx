@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
+    const token = sessionStorage.getItem("access_token");
     if (!token) {
       setIsLoading(false);
       return;
@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authApi
       .me()
       .then((res) => setUser(res.data))
-      .catch(() => localStorage.removeItem("access_token"))
+      .catch(() => sessionStorage.removeItem("access_token"))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const { data } = await authApi.login(email, password);
-    localStorage.setItem("access_token", data.access_token);
+    sessionStorage.setItem("access_token", data.access_token);
     const me = await authApi.me();
     setUser(me.data);
   }, []);
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
-    localStorage.removeItem("access_token");
+    sessionStorage.removeItem("access_token");
     setUser(null);
   }, []);
 
