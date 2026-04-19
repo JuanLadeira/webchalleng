@@ -74,7 +74,7 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
       <nav className="flex flex-col gap-1">
         <NavItem to="/calendar" label="Calendário" icon="📆" />
         <NavItem to="/bookings" label="Minhas Reservas" icon="📅" />
-        <NavItem to="/calendar" label="Nova Reserva" icon="+" />
+        <NavItem to="/rooms" label="Salas Disponíveis" icon="🚪" />
       </nav>
 
       {/* Nav admin — só OWNER */}

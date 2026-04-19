@@ -114,6 +114,7 @@ class BookingModel(Base):
     )
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[BookingStatusEnum] = mapped_column(
         Enum(BookingStatusEnum, values_callable=lambda x: [e.value for e in x]),
         nullable=False,

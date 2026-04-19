@@ -22,6 +22,15 @@ class BookingRepository(ABC):
     ) -> Booking | None: ...
 
     @abstractmethod
+    async def find_user_overlap(
+        self,
+        user_id: UUID,
+        start_at: datetime,
+        end_at: datetime,
+        exclude_id: UUID | None = None,
+    ) -> Booking | None: ...
+
+    @abstractmethod
     async def create(
         self,
         title: str,

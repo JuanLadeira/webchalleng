@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { bookingsApi, roomsApi } from "../api/client";
 import { Layout } from "../components/Layout";
 import { BookingList } from "../components/BookingList";
+import { BookingModal } from "../components/BookingModal";
 import { Toast, useToast } from "../components/Toast";
 
 export function RoomDetailPage() {
@@ -10,6 +12,7 @@ export function RoomDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast, show, hide } = useToast();
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   const { data: room, isLoading } = useQuery({
     queryKey: ["rooms", id],
@@ -67,7 +70,7 @@ export function RoomDetailPage() {
       <div className="mb-4 flex items-center justify-between">
         <h3 className="font-semibold text-gray-700">Minhas reservas nesta sala</h3>
         <button
-          onClick={() => navigate(`/bookings/new?room_id=${room.id}`)}
+          onClick={() => setShowBookingModal(true)}
           className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
         >
           Nova Reserva
@@ -77,7 +80,24 @@ export function RoomDetailPage() {
       <BookingList
         bookings={roomBookings}
         onCancel={(bookingId) => cancelMutation.mutate(bookingId)}
+        onViewInCalendar={(booking) =>
+          navigate(`/calendar?highlight=${booking.id}&date=${booking.start_at.split("T")[0]}`)
+        }
       />
+
+      {showBookingModal && (
+        <BookingModal
+          mode="create"
+          roomId={room.id}
+          onClose={() => setShowBookingModal(false)}
+          onSuccess={() => {
+            setShowBookingModal(false);
+            queryClient.invalidateQueries({ queryKey: ["bookings"] });
+            show("Reserva criada com sucesso!", "success");
+          }}
+          showToast={show}
+        />
+      )}
     </Layout>
   );
 }

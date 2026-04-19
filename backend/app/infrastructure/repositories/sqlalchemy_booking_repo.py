@@ -23,6 +23,7 @@ def _to_entity(model: BookingModel) -> Booking:
         start_at=model.start_at,
         end_at=model.end_at,
         status=BookingStatus(model.status.value),
+        notes=model.notes,
         created_at=model.created_at,
         updated_at=model.updated_at,
         participants=[
@@ -74,7 +75,25 @@ class SQLAlchemyBookingRepository(BookingRepository):
         )
         if exclude_id:
             query = query.where(BookingModel.id != exclude_id)
+        result = await self.session.execute(query)
+        model = result.scalar_one_or_none()
+        return _to_entity(model) if model else None
 
+    async def find_user_overlap(
+        self,
+        user_id: UUID,
+        start_at: datetime,
+        end_at: datetime,
+        exclude_id: UUID | None = None,
+    ) -> Booking | None:
+        query = select(BookingModel).options(selectinload(BookingModel.participants)).where(
+            BookingModel.user_id == user_id,
+            BookingModel.status == BookingStatusEnum.ACTIVE,
+            BookingModel.start_at < end_at,
+            BookingModel.end_at > start_at,
+        )
+        if exclude_id:
+            query = query.where(BookingModel.id != exclude_id)
         result = await self.session.execute(query)
         model = result.scalar_one_or_none()
         return _to_entity(model) if model else None
@@ -87,6 +106,7 @@ class SQLAlchemyBookingRepository(BookingRepository):
         start_at: datetime,
         end_at: datetime,
         participant_emails: list[str],
+        notes: str | None = None,
     ) -> Booking:
         model = BookingModel(
             title=title,
@@ -94,6 +114,7 @@ class SQLAlchemyBookingRepository(BookingRepository):
             user_id=user_id,
             start_at=start_at,
             end_at=end_at,
+            notes=notes,
         )
         self.session.add(model)
         await self.session.flush()
@@ -122,6 +143,7 @@ class SQLAlchemyBookingRepository(BookingRepository):
         start_at: datetime | None,
         end_at: datetime | None,
         participant_emails: list[str] | None,
+        notes: str | None = None,
     ) -> Booking | None:
         result = await self.session.execute(
             select(BookingModel)
@@ -138,6 +160,8 @@ class SQLAlchemyBookingRepository(BookingRepository):
             model.start_at = start_at
         if end_at is not None:
             model.end_at = end_at
+        if notes is not None:
+            model.notes = notes
 
         if participant_emails is not None:
             for p in list(model.participants):

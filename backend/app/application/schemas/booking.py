@@ -21,9 +21,11 @@ class ParticipantOut(BaseModel):
 
 class BookingCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
+    room_id: UUID | None = None
     start_at: datetime
     end_at: datetime
     participant_emails: list[EmailStr] = Field(default_factory=list)
+    notes: str | None = Field(None, max_length=2000)
     recurrence: RecurrenceType = RecurrenceType.NONE
     recurrence_count: int = Field(1, ge=1, le=52)
 
@@ -44,6 +46,7 @@ class BookingUpdate(BaseModel):
     start_at: datetime | None = None
     end_at: datetime | None = None
     participant_emails: list[EmailStr] | None = None
+    notes: str | None = Field(None, max_length=2000)
 
     @model_validator(mode="after")
     def validate_dates_if_present(self):
@@ -66,6 +69,7 @@ class BookingOut(BaseModel):
     start_at: datetime
     end_at: datetime
     status: str
+    notes: str | None
     participants: list[ParticipantOut]
 
     model_config = {"from_attributes": True}

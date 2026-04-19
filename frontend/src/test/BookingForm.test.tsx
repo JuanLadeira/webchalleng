@@ -45,6 +45,7 @@ describe("BookingForm", () => {
         start_at: "2025-12-01T09:00",
         end_at: "2025-12-01T10:00",
         participant_emails: ["alice@test.com"],
+        notes: "",
         recurrence: "none",
         recurrence_count: 1,
       });

@@ -33,6 +33,7 @@ def _to_out(booking: Booking) -> BookingOut:
         start_at=booking.start_at,
         end_at=booking.end_at,
         status=booking.status.value,
+        notes=booking.notes,
         participants=[
             {"id": p.id, "email": p.email, "name": p.name}
             for p in booking.participants
@@ -48,6 +49,7 @@ def _booking_payload(booking: Booking) -> dict:
         "start_at": booking.start_at.isoformat(),
         "end_at": booking.end_at.isoformat(),
         "participants": [p.email for p in booking.participants],
+        "notes": booking.notes,
     }
 
 
@@ -58,11 +60,16 @@ class BookingService:
         self.outbox: OutboxRepository = SQLAlchemyOutboxRepository(session)
 
     async def create(self, data: BookingCreate, organizer_id: UUID) -> BookingOut:
-        # Cria sala automaticamente para esta reserva (ou série)
-        room = RoomModel(name=f"booking-{_uuid.uuid4()}", capacity=1)
-        self.session.add(room)
-        await self.session.flush()
-        room_id = room.id
+        if data.room_id is not None:
+            room = await self.session.get(RoomModel, data.room_id)
+            if room is None:
+                raise HTTPException(status_code=404, detail="Sala não encontrada.")
+            room_id = room.id
+        else:
+            room = RoomModel(name=f"{data.title} [{str(_uuid.uuid4())[:8]}]", capacity=1)
+            self.session.add(room)
+            await self.session.flush()
+            room_id = room.id
 
         # Calcula ocorrências
         duration = data.end_at - data.start_at
@@ -78,6 +85,17 @@ class BookingService:
         try:
             for start_at in starts:
                 end_at = start_at + duration
+                user_overlap = await self.repo.find_user_overlap(
+                    user_id=organizer_id,
+                    start_at=start_at,
+                    end_at=end_at,
+                )
+                if user_overlap:
+                    slot = start_at.strftime("%d/%m/%Y %H:%M")
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Você já possui uma reserva nesse horário ({slot}): '{user_overlap.title}'.",
+                    )
                 booking = await self.repo.create(
                     title=data.title,
                     room_id=room_id,
@@ -85,6 +103,7 @@ class BookingService:
                     start_at=start_at,
                     end_at=end_at,
                     participant_emails=data.participant_emails,
+                    notes=data.notes,
                 )
                 if first_booking is None:
                     first_booking = booking
@@ -149,6 +168,7 @@ class BookingService:
                 start_at=data.start_at,
                 end_at=data.end_at,
                 participant_emails=data.participant_emails,
+                notes=data.notes,
             )
             await self.outbox.create(
                 event_type=EventType.BOOKING_UPDATED,

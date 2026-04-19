@@ -115,6 +115,13 @@ export function DetailModal({
             </div>
           )}
 
+          {booking.notes && (
+            <div className="flex items-start gap-3 text-sm text-gray-700">
+              <span className="mt-0.5 text-gray-400" aria-hidden="true">📝</span>
+              <p className="whitespace-pre-wrap">{booking.notes}</p>
+            </div>
+          )}
+
           <div className="flex items-center gap-3 text-sm">
             <span aria-hidden="true">•</span>
             <span

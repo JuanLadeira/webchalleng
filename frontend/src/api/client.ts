@@ -49,6 +49,7 @@ export interface Booking {
   start_at: string;
   end_at: string;
   status: BookingStatus;
+  notes: string | null;
   participants: Participant[];
 }
 
@@ -100,9 +101,11 @@ export const bookingsApi = {
   get: (id: string) => api.get<Booking>(`/bookings/${id}`),
   create: (data: {
     title: string;
+    room_id?: string;
     start_at: string;
     end_at: string;
     participant_emails?: string[];
+    notes?: string;
     recurrence?: "none" | "daily" | "weekly";
     recurrence_count?: number;
   }) => api.post<Booking>("/bookings", data),
@@ -111,6 +114,7 @@ export const bookingsApi = {
     start_at?: string;
     end_at?: string;
     participant_emails?: string[];
+    notes?: string;
   }) => api.patch<Booking>(`/bookings/${id}`, data),
   cancel: (id: string) => api.delete<Booking>(`/bookings/${id}`),
 };

@@ -6,6 +6,7 @@ export interface BookingFormData {
   start_at: string;
   end_at: string;
   participant_emails: string[];
+  notes: string;
   recurrence: "none" | "daily" | "weekly";
   recurrence_count: number;
 }
@@ -16,6 +17,7 @@ interface BookingFormProps {
   initialEnd?: string;
   initialTitle?: string;
   initialEmails?: string[];
+  initialNotes?: string;
   onSubmit: (data: BookingFormData) => Promise<void>;
   isLoading?: boolean;
   error?: string | null;
@@ -117,6 +119,7 @@ export function BookingForm({
   initialEnd = "",
   initialTitle = "",
   initialEmails = [],
+  initialNotes = "",
   onSubmit,
   isLoading,
   error,
@@ -126,6 +129,7 @@ export function BookingForm({
   const [startAt, setStartAt] = useState(initialStart);
   const [endAt, setEndAt] = useState(initialEnd);
   const [emails, setEmails] = useState<string[]>(initialEmails);
+  const [notes, setNotes] = useState(initialNotes);
   const [recurrence, setRecurrence] = useState<"none" | "daily" | "weekly">("none");
   const [recurrenceCount, setRecurrenceCount] = useState(1);
 
@@ -138,6 +142,7 @@ export function BookingForm({
       start_at: startAt,
       end_at: endAt,
       participant_emails: emails,
+      notes,
       recurrence,
       recurrence_count: recurrenceCount,
     });
@@ -240,6 +245,22 @@ export function BookingForm({
           </span>
         </label>
         <EmailTagInput emails={emails} onChange={setEmails} />
+      </div>
+
+      {/* Observações */}
+      <div>
+        <label htmlFor="notes" className="mb-1 block text-sm font-medium text-gray-700">
+          Observações{" "}
+          <span className="font-normal text-gray-400">(opcional)</span>
+        </label>
+        <textarea
+          id="notes"
+          rows={3}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Pauta, materiais necessários, instruções para os participantes..."
+          className="w-full resize-none rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       </div>
 
       {error && (

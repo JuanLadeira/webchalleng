@@ -3,6 +3,7 @@ import type { Booking } from "../api/client";
 interface BookingListProps {
   bookings: Booking[];
   onCancel?: (id: string) => void;
+  onViewInCalendar?: (booking: Booking) => void;
 }
 
 function formatDate(iso: string) {
@@ -14,7 +15,7 @@ function formatDate(iso: string) {
   };
 }
 
-export function BookingList({ bookings, onCancel }: BookingListProps) {
+export function BookingList({ bookings, onCancel, onViewInCalendar }: BookingListProps) {
   if (bookings.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-200 bg-white py-12 text-center">
@@ -66,6 +67,15 @@ export function BookingList({ bookings, onCancel }: BookingListProps) {
               >
                 {isActive ? "Ativa" : "Cancelada"}
               </span>
+              {onViewInCalendar && (
+                <button
+                  onClick={() => onViewInCalendar(b)}
+                  className="rounded-lg border border-blue-200 px-3 py-1 text-xs text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                  title="Ver no calendário"
+                >
+                  📅 Calendário
+                </button>
+              )}
               {isActive && onCancel && (
                 <button
                   onClick={() => onCancel(b.id)}
