@@ -1,20 +1,24 @@
 """Testes unitários para smtp_sender — sem dependência de SMTP real."""
 from unittest.mock import MagicMock, patch
 
+from app.config import settings
+from app.infrastructure.email.smtp_sender import (
+    _base_template,
+    booking_canceled_email,
+    booking_created_email,
+    booking_updated_email,
+    send_email,
+)
 
 # ── send_email ──────────────────────────────────────────────────────────────
 
 def test_send_email_empty_recipients_returns_early():
-    from app.infrastructure.email.smtp_sender import send_email
-    # Não deve chamar smtplib se a lista estiver vazia
     with patch("smtplib.SMTP") as mock_smtp:
         send_email(to=[], subject="Assunto", html_body="<p>corpo</p>")
         mock_smtp.assert_not_called()
 
 
 def test_send_email_calls_smtp_send_message():
-    from app.infrastructure.email.smtp_sender import send_email
-
     mock_server = MagicMock()
     with patch("smtplib.SMTP") as mock_smtp_cls:
         mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
@@ -26,9 +30,6 @@ def test_send_email_calls_smtp_send_message():
 
 
 def test_send_email_with_tls_and_auth():
-    from app.infrastructure.email.smtp_sender import send_email
-    from app.config import settings
-
     mock_server = MagicMock()
     with (
         patch("smtplib.SMTP") as mock_smtp_cls,
@@ -48,8 +49,6 @@ def test_send_email_with_tls_and_auth():
 # ── booking_updated_email ────────────────────────────────────────────────────
 
 def test_booking_updated_email_returns_subject_and_html():
-    from app.infrastructure.email.smtp_sender import booking_updated_email
-
     payload = {
         "title": "Sprint Review",
         "start_at": "2026-04-19T10:00:00+00:00",
@@ -64,8 +63,6 @@ def test_booking_updated_email_returns_subject_and_html():
 
 
 def test_booking_updated_email_with_participants():
-    from app.infrastructure.email.smtp_sender import booking_updated_email
-
     payload = {
         "title": "Review",
         "start_at": "2026-04-19T10:00:00+00:00",
@@ -80,8 +77,6 @@ def test_booking_updated_email_with_participants():
 # ── booking_canceled_email ───────────────────────────────────────────────────
 
 def test_booking_canceled_email_returns_subject_and_html():
-    from app.infrastructure.email.smtp_sender import booking_canceled_email
-
     payload = {
         "title": "Reunião cancelada",
         "start_at": "2026-04-19T14:00:00+00:00",
@@ -96,8 +91,6 @@ def test_booking_canceled_email_returns_subject_and_html():
 
 
 def test_booking_canceled_email_with_notes():
-    from app.infrastructure.email.smtp_sender import booking_canceled_email
-
     payload = {
         "title": "Reunião",
         "start_at": "2026-04-19T14:00:00+00:00",
@@ -112,8 +105,6 @@ def test_booking_canceled_email_with_notes():
 # ── _base_template com notes ─────────────────────────────────────────────────
 
 def test_base_template_renders_notes_block():
-    from app.infrastructure.email.smtp_sender import _base_template
-
     html = _base_template(
         accent="#ff0000",
         icon="📌",
@@ -122,13 +113,10 @@ def test_base_template_renders_notes_block():
         notes="Observação importante & especial",
     )
     assert "Observações" in html
-    # HTML-escaped ampersand
     assert "Observação importante" in html
 
 
 def test_booking_created_email_with_notes_and_participants():
-    from app.infrastructure.email.smtp_sender import booking_created_email
-
     payload = {
         "title": "Planning",
         "start_at": "2026-04-19T09:00:00+00:00",
