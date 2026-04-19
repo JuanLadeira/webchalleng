@@ -50,7 +50,7 @@ backend/app/
 │   ├── database/        ← SQLAlchemy models + sessão async
 │   ├── repositories/    ← Implementações SQLAlchemy dos ABCs
 │   ├── security/        ← JWT (python-jose) + bcrypt
-│   └── email/           ← SMTP sender (Fase 6 — pendente)
+│   └── email/           ← SMTP sender (smtp_sender.py)
 │
 ├── api/                 ← Camada HTTP (FastAPI)
 │   ├── routers/         ← auth, rooms, bookings, admin
@@ -164,7 +164,7 @@ BookingService.create()
        INSERT outbox_events (BOOKING_CREATED, pending)
   ── COMMIT ─────────────────────────────────────────────────
        │
-       ▼ (assíncrono, ~10s depois — Fase 6 pendente)
+       ▼ (assíncrono, ~10s depois)
 Celery Beat → process_pending_events
   → OutboxRepository.get_pending()  (SELECT FOR UPDATE SKIP LOCKED)
   → SMTPSender.send()               (aiosmtplib → Mailpit)
@@ -315,8 +315,8 @@ main
 ├── feature-5-bookings              ← reservas + overlap            ✓ merged
 ├── feature-6-outbox-worker         ← worker + e-mail               ✓ merged (PR #8)
 ├── feature-6c-booking-modal-dnd    ← modal, DnD, UX polish         ✓ merged (PR #9)
-├── feature-dark-mode               ← dark mode + cor de reserva    🔄 em progresso
-└── feature-8-polish                ← docs + smoke test             pendente
+├── feature-dark-mode               ← dark mode + cor de reserva    ✓ merged (PR #10)
+└── docs/update-documentation       ← atualização de docs           🔄 em progresso
 ```
 
 ---

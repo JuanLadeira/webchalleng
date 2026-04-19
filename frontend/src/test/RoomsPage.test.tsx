@@ -40,7 +40,9 @@ const mockUser: User = {
   id: "u1",
   name: "Test User",
   email: "test@example.com",
-  role: "member",
+  role: "MEMBER",
+  is_active: true,
+  created_at: "2024-01-01T00:00:00Z",
 };
 
 function renderRooms() {
