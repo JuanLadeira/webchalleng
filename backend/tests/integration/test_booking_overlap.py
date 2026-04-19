@@ -1,11 +1,8 @@
 """
 Testes de criação e conflito de reservas.
 
-Com o modelo de auto-criação de sala (cada booking gera sua própria Room),
-não existe mais detecção de overlap por sala — múltiplas reservas no mesmo
-horário são válidas pois cada uma ocupa uma sala diferente.
-
-Os testes de 409 foram removidos pois esse comportamento não existe mais.
+Um mesmo usuário não pode ter duas reservas com horários sobrepostos,
+independente da sala. Tentativas de sobreposição retornam 409.
 """
 from datetime import datetime, timedelta, timezone
 
@@ -39,10 +36,10 @@ def make_booking(start: datetime, end: datetime, title: str = "Reunião") -> dic
 
 
 class TestBookingCreation:
-    async def test_same_time_slot_allowed_different_rooms(
+    async def test_same_time_slot_blocked_same_user(
         self, db_client: AsyncClient, auth_headers
     ):
-        """Dois bookings no mesmo horário são válidos — salas são independentes."""
+        """O mesmo usuário não pode criar duas reservas no mesmo horário."""
         start = NOW + timedelta(days=2, hours=9)
         end = start + timedelta(hours=1)
 
@@ -58,12 +55,12 @@ class TestBookingCreation:
             json=make_booking(start, end, "Reunião B"),
             headers=auth_headers,
         )
-        assert r2.status_code == 201
+        assert r2.status_code == 409
 
-    async def test_partial_overlap_allowed(
+    async def test_partial_overlap_blocked_same_user(
         self, db_client: AsyncClient, auth_headers
     ):
-        """Reservas com horário parcialmente sobreposto são permitidas (salas distintas)."""
+        """Sobreposição parcial de horário também é bloqueada para o mesmo usuário."""
         start = NOW + timedelta(days=2, hours=14)
         end = start + timedelta(hours=2)
 
@@ -81,7 +78,7 @@ class TestBookingCreation:
             json=make_booking(overlap_start, overlap_end, "Reunião paralela"),
             headers=auth_headers,
         )
-        assert r2.status_code == 201
+        assert r2.status_code == 409
 
     async def test_adjacent_slots_are_allowed(
         self, db_client: AsyncClient, auth_headers
