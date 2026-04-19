@@ -57,17 +57,68 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
 
+            # Nome do projeto docker compose (derivado do diretório)
+            PROJECT=$(basename "$PWD" | tr '[:upper:]' '[:lower:]')
+
+            echo "→ Salvando imagens atuais para rollback..."
+            BACKEND_IMG=$(docker compose -f docker-compose.prod.yml images -q backend 2>/dev/null || true)
+            FRONTEND_IMG=$(docker compose -f docker-compose.prod.yml images -q frontend 2>/dev/null || true)
+
+            if [ -n "$BACKEND_IMG" ]; then
+              docker tag "$BACKEND_IMG" "${PROJECT}-backend:rollback" 2>/dev/null || true
+            fi
+            if [ -n "$FRONTEND_IMG" ]; then
+              docker tag "$FRONTEND_IMG" "${PROJECT}-frontend:rollback" 2>/dev/null || true
+            fi
+
             echo "→ Pulling latest code..."
             git fetch origin main
             git reset --hard origin/main
 
-            echo "→ Building images..."
+            echo "→ Building new images..."
             docker compose -f docker-compose.prod.yml build --no-cache
 
-            echo "→ Starting services..."
+            echo "→ Starting services with new images..."
             docker compose -f docker-compose.prod.yml up -d
 
-            echo "→ Cleaning up old images..."
+            echo "→ Health check (até 2 min)..."
+            HEALTHY=false
+            for i in $(seq 1 12); do
+              if curl -sf --max-time 5 http://localhost:8000/health > /dev/null 2>&1; then
+                HEALTHY=true
+                break
+              fi
+              echo "  aguardando... ($i/12)"
+              sleep 10
+            done
+
+            if [ "$HEALTHY" = "false" ]; then
+              echo "✗ Health check falhou — executando rollback..."
+              docker compose -f docker-compose.prod.yml down
+
+              ROLLED_BACK=false
+              if docker image inspect "${PROJECT}-backend:rollback" > /dev/null 2>&1; then
+                docker tag "${PROJECT}-backend:rollback" "${PROJECT}-backend:latest" 2>/dev/null || true
+                ROLLED_BACK=true
+              fi
+              if docker image inspect "${PROJECT}-frontend:rollback" > /dev/null 2>&1; then
+                docker tag "${PROJECT}-frontend:rollback" "${PROJECT}-frontend:latest" 2>/dev/null || true
+                ROLLED_BACK=true
+              fi
+
+              if [ "$ROLLED_BACK" = "true" ]; then
+                echo "  Restaurando containers com imagem anterior..."
+                docker compose -f docker-compose.prod.yml up -d --no-build
+                echo "✗ Rollback concluído. Versão anterior restaurada."
+              else
+                echo "✗ Sem imagem anterior para rollback. Intervenção manual necessária."
+              fi
+
+              exit 1
+            fi
+
+            echo "→ Removendo imagens de rollback e órfãs..."
+            docker rmi "${PROJECT}-backend:rollback" "${PROJECT}-frontend:rollback" 2>/dev/null || true
             docker image prune -f
 
             echo "✓ Deploy concluído."
