@@ -48,6 +48,7 @@ describe("BookingForm", () => {
         notes: "",
         recurrence: "none",
         recurrence_count: 1,
+        color: null,
       });
     });
   });
