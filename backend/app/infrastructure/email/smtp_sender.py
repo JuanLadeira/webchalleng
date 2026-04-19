@@ -38,18 +38,48 @@ def _fmt_dt(iso: str) -> str:
     return dt.strftime("%d/%m/%Y às %H:%M (UTC)")
 
 
-def _base_template(accent: str, icon: str, headline: str, body_rows: str, notes: str | None = None) -> str:
+_S_BODY = (
+    "margin:0;padding:0;background:#f3f4f6;"
+    "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',"
+    "Roboto,Helvetica,Arial,sans-serif"
+)
+_S_CARD = (
+    "max-width:520px;background:#ffffff;border-radius:12px;"
+    "overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.10)"
+)
+_S_H1 = (
+    "margin:10px 0 0;font-size:22px;font-weight:700;"
+    "color:#ffffff;line-height:1.3"
+)
+_S_NOTES_LABEL = (
+    "margin:0 0 6px;font-size:12px;font-weight:600;"
+    "letter-spacing:.05em;text-transform:uppercase;color:#9ca3af"
+)
+_S_TD_LABEL = (
+    "padding:6px 0;width:110px;vertical-align:top;"
+    "font-size:13px;color:#6b7280;font-weight:500"
+)
+
+
+def _base_template(
+    accent: str, icon: str, headline: str, body_rows: str, notes: str | None = None
+) -> str:
     notes_block = ""
     if notes:
         import html as _html
         escaped = _html.escape(notes).replace("\n", "<br>")
+        s_notes_text = (
+            f"margin:0;font-size:14px;color:#374151;line-height:1.6;"
+            f"background:#f9fafb;border-left:3px solid {accent};"
+            f"border-radius:4px;padding:10px 14px"
+        )
         notes_block = f"""
         <tr>
           <td style="padding:20px 32px 0">
-            <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#9ca3af">
+            <p style="{_S_NOTES_LABEL}">
               Observações
             </p>
-            <p style="margin:0;font-size:14px;color:#374151;line-height:1.6;background:#f9fafb;border-left:3px solid {accent};border-radius:4px;padding:10px 14px">
+            <p style="{s_notes_text}">
               {escaped}
             </p>
           </td>
@@ -62,19 +92,19 @@ def _base_template(accent: str, icon: str, headline: str, body_rows: str, notes:
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{headline}</title>
 </head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+<body style="{_S_BODY}">
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
          style="background:#f3f4f6;padding:32px 16px">
     <tr>
       <td align="center">
         <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
-               style="max-width:520px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.10)">
+               style="{_S_CARD}">
 
           <!-- Header -->
           <tr>
             <td style="background:{accent};padding:28px 32px">
               <p style="margin:0;font-size:28px;line-height:1">{icon}</p>
-              <h1 style="margin:10px 0 0;font-size:22px;font-weight:700;color:#ffffff;line-height:1.3">
+              <h1 style="{_S_H1}">
                 {headline}
               </h1>
             </td>
@@ -115,7 +145,7 @@ def _base_template(accent: str, icon: str, headline: str, body_rows: str, notes:
 
 def _info_row(label: str, value: str) -> str:
     return f"""<tr>
-  <td style="padding:6px 0;width:110px;vertical-align:top;font-size:13px;color:#6b7280;font-weight:500">
+  <td style="{_S_TD_LABEL}">
     {label}
   </td>
   <td style="padding:6px 0;font-size:14px;color:#111827;font-weight:600">

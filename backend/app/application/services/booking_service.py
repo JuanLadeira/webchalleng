@@ -94,7 +94,10 @@ class BookingService:
                     slot = start_at.strftime("%d/%m/%Y %H:%M")
                     raise HTTPException(
                         status_code=409,
-                        detail=f"Você já possui uma reserva nesse horário ({slot}): '{user_overlap.title}'.",
+                        detail=(
+                            f"Você já possui uma reserva nesse horário ({slot}): "
+                            f"'{user_overlap.title}'."
+                        ),
                     )
                 booking = await self.repo.create(
                     title=data.title,
