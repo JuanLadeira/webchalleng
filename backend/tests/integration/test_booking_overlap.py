@@ -27,6 +27,21 @@ async def auth_headers(db_client: AsyncClient) -> dict:
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
 
+@pytest.fixture
+async def auth_headers_second_user(db_client: AsyncClient) -> dict:
+    payload = {
+        "name": "Second User",
+        "email": "second@example.com",
+        "password": "senha123",
+    }
+    await db_client.post("/api/auth/register", json=payload)
+    login = await db_client.post(
+        "/api/auth/login",
+        data={"username": payload["email"], "password": payload["password"]},
+    )
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
 def make_booking(start: datetime, end: datetime, title: str = "Reunião") -> dict:
     return {
         "title": title,
@@ -145,3 +160,24 @@ class TestBookingCreation:
             headers=auth_headers,
         )
         assert response.status_code == 200
+
+    async def test_same_time_slot_allowed_different_users(
+        self, db_client: AsyncClient, auth_headers, auth_headers_second_user
+    ):
+        """Usuários distintos podem ter reservas no mesmo horário."""
+        start = NOW + timedelta(days=7, hours=10)
+        end = start + timedelta(hours=1)
+
+        r1 = await db_client.post(
+            "/api/bookings",
+            json=make_booking(start, end, "Reunião usuário 1"),
+            headers=auth_headers,
+        )
+        assert r1.status_code == 201
+
+        r2 = await db_client.post(
+            "/api/bookings",
+            json=make_booking(start, end, "Reunião usuário 2"),
+            headers=auth_headers_second_user,
+        )
+        assert r2.status_code == 201
