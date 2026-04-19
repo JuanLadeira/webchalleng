@@ -128,14 +128,21 @@ Copie `.env.example` para `.env` e ajuste conforme necessário.
 - Visualização semanal, mensal e diária (estilo Google Calendar)
 - Clicar em um horário vazio → cria reserva com datas pré-preenchidas
 - Clicar em um evento → modal com detalhes e opção de cancelamento
+- Drag & Drop e resize de eventos diretamente no calendário
 - Navegação direta do "Minhas Reservas" para o calendário destacando a reserva
+- Painel ⚙️ de configurações (range de horas, tamanho de slot, horário comercial, finais de semana)
 
 ### Reservas
 - Criação com título, horário e participantes (e-mail)
 - **Sala criada automaticamente** — não é necessário gerenciar salas manualmente
 - **Recorrência**: diária ou semanal, com número de ocorrências configurável
+- **Cor customizável** por reserva (10 swatches + opção automática por hash do título)
 - Cancelamento com soft delete
 - Proteção contra conflito de horário em três camadas (ver Arquitetura)
+
+### Tema
+- **Dark mode** completo com toggle ☀️/🌙 na sidebar
+- Tema persiste por sessão via `sessionStorage`
 
 ### Administração (role OWNER)
 - Gerenciamento de salas: ativar/desativar
@@ -225,16 +232,15 @@ EXCLUDE USING gist (
 
 ## Notificações por e-mail (Outbox Pattern)
 
-> ⚠️ **Em desenvolvimento (Fase 6)** — a infraestrutura do outbox está completa, mas o worker e o sender SMTP ainda não foram implementados.
+Fluxo completo e em produção:
 
-Fluxo planejado:
 1. Reserva criada/alterada/cancelada → evento persistido em `outbox_events` na mesma transação
 2. Celery Beat dispara `process_pending_events` a cada 10 segundos
 3. Worker busca eventos com `SELECT FOR UPDATE SKIP LOCKED`
 4. Cada evento tem `idempotency_key` UUID único — reprocessamentos são ignorados
 5. E-mail enviado e evento marcado como `processed`
 
-Em desenvolvimento, os e-mails seriam capturados pelo **Mailpit** em http://localhost:8025.
+Em desenvolvimento, os e-mails são capturados pelo **Mailpit** em http://localhost:8025.
 
 ---
 
@@ -247,20 +253,24 @@ backend/tests/
 ├── unit/
 │   ├── test_booking_validators.py
 │   └── test_domain_rules.py
-├── integration/
-│   ├── test_auth_api.py
-│   ├── test_rooms_api.py
-│   ├── test_bookings_api.py
-│   ├── test_booking_overlap.py
-│   └── test_outbox_creation.py
-└── worker/
-    ├── test_outbox_processing.py
-    └── test_idempotency.py
+└── integration/
+    ├── test_auth_api.py
+    ├── test_rooms_api.py
+    ├── test_bookings_api.py
+    ├── test_booking_overlap.py
+    └── test_outbox_creation.py
 
 frontend/src/test/
+├── setup.ts
 ├── LoginPage.test.tsx
 ├── BookingForm.test.tsx
 └── RoomsPage.test.tsx
+```
+
+Cobertura frontend via `@vitest/coverage-istanbul`:
+
+```bash
+cd frontend && npm run test -- --coverage
 ```
 
 ---
@@ -274,6 +284,8 @@ frontend/src/test/
 | 3 — Autenticação | register, login, /me, JWT | ✅ Concluída |
 | 4 — Salas | CRUD de salas | ✅ Concluída |
 | 5 — Reservas | Overlap, outbox transacional, concorrência | ✅ Concluída |
-| 6 — Outbox + Worker | Celery worker + e-mail SMTP | ⚠️ Parcial (infra pronta, worker stub) |
-| 7 — Frontend | React + calendário + admin | ✅ Concluída |
-| 8 — Polish + Docs | README, smoke test, CI 100% verde | 🔄 Em andamento |
+| 6 — Outbox + Worker | Celery worker + SMTP (Mailpit) + retry + idempotência | ✅ Concluída |
+| 7 — Frontend | React + FullCalendar + DnD + admin | ✅ Concluída |
+| 8 — UX Polish | Booking modal DnD, cor de reserva, validação user-overlap | ✅ Concluída |
+| 9 — Dark Mode | ThemeContext, toggle ☀️/🌙, suporte FullCalendar, coverage frontend | ✅ Concluída |
+| 10 — Live Meetings | Videoconferência integrada (Daily.co) | 🔲 Planejada |

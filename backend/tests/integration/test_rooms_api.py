@@ -176,3 +176,46 @@ class TestDeleteRoom:
         fake_id = "00000000-0000-0000-0000-000000000000"
         response = await db_client.delete(f"/api/rooms/{fake_id}", headers=auth_headers)
         assert response.status_code == 404
+
+
+class TestListRoomBookings:
+    async def test_list_room_bookings_returns_active_bookings(
+        self, db_client: AsyncClient, auth_headers, room_payload
+    ):
+        from datetime import datetime, timedelta, timezone
+
+        payload = {**room_payload, "name": "Sala BookingsTest"}
+        room_resp = await db_client.post("/api/rooms", json=payload, headers=auth_headers)
+        room_id = room_resp.json()["id"]
+
+        now = datetime.now(tz=timezone.utc).replace(microsecond=0)
+        start = now + timedelta(days=1)
+        end = start + timedelta(hours=1)
+        await db_client.post(
+            "/api/bookings",
+            json={
+                "title": "Reunião na sala",
+                "room_id": room_id,
+                "start_at": start.isoformat(),
+                "end_at": end.isoformat(),
+            },
+            headers=auth_headers,
+        )
+
+        response = await db_client.get(f"/api/rooms/{room_id}/bookings", headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) >= 1
+        assert all(b["room_id"] == room_id for b in data)
+
+    async def test_list_room_bookings_empty_for_new_room(
+        self, db_client: AsyncClient, auth_headers, room_payload
+    ):
+        payload = {**room_payload, "name": "Sala Vazia Bookings"}
+        room_resp = await db_client.post("/api/rooms", json=payload, headers=auth_headers)
+        room_id = room_resp.json()["id"]
+
+        response = await db_client.get(f"/api/rooms/{room_id}/bookings", headers=auth_headers)
+        assert response.status_code == 200
+        assert response.json() == []

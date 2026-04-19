@@ -10,43 +10,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: meetings
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 5
-
     defaults:
       run:
         working-directory: backend
 
     env:
-      POSTGRES_USER: test
-      POSTGRES_PASSWORD: test
-      POSTGRES_DB: meetings
-      POSTGRES_HOST: localhost
-      POSTGRES_PORT: 5432
-      REDIS_HOST: localhost
-      REDIS_PORT: 6379
       JWT_SECRET_KEY: test-secret-key
       SMTP_HOST: localhost
       SMTP_PORT: 1025
@@ -69,25 +37,6 @@ jobs:
 
       - name: Lint (ruff)
         run: ruff check app tests
-
-      - name: Run Alembic migrations
-        run: alembic upgrade head
-
-      - name: Create test database
-        run: |
-          python - <<'EOF'
-          import asyncio
-          import asyncpg
-
-          async def main():
-              conn = await asyncpg.connect(
-                  "postgresql://test:test@localhost:5432/meetings"
-              )
-              await conn.execute("CREATE DATABASE test_meetings")
-              await conn.close()
-
-          asyncio.run(main())
-          EOF
 
       - name: Run tests
         run: pytest --asyncio-mode=auto -v --cov=app --cov-report=term-missing

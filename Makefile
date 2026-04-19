@@ -28,23 +28,18 @@ rollback:
 # ── Testes ────────────────────────────────────────────────────────────────────
 .PHONY: test test-cov test-unit test-int test-fe
 
-# Variáveis para rodar testes localmente (fora do Docker)
-TEST_ENV := POSTGRES_HOST=localhost POSTGRES_PORT=5432 \
-            POSTGRES_USER=user POSTGRES_PASSWORD=pass POSTGRES_DB=meetings \
-            REDIS_HOST=localhost REDIS_PORT=6379 \
-            JWT_SECRET_KEY=test-secret-key
-
+# testcontainers provisiona o banco automaticamente — sem variáveis manuais
 test:
-	cd $(BACKEND_DIR) && $(TEST_ENV) uv run pytest -v
+	cd $(BACKEND_DIR) && JWT_SECRET_KEY=test-secret-key uv run pytest -v
 
 test-cov:
-	cd $(BACKEND_DIR) && $(TEST_ENV) uv run pytest -v --cov=app --cov-report=term-missing
+	cd $(BACKEND_DIR) && JWT_SECRET_KEY=test-secret-key uv run pytest -v --cov=app --cov-report=term-missing
 
 test-unit:
 	cd $(BACKEND_DIR) && uv run pytest tests/unit -v
 
 test-int:
-	cd $(BACKEND_DIR) && $(TEST_ENV) uv run pytest tests/integration -v
+	cd $(BACKEND_DIR) && JWT_SECRET_KEY=test-secret-key uv run pytest tests/integration -v
 
 test-fe:
 	cd $(FRONTEND_DIR) && npm test
@@ -60,6 +55,21 @@ fmt:
 
 fmt-check:
 	cd $(BACKEND_DIR) && uv run ruff format --check app tests
+
+# ── Produção ──────────────────────────────────────────────────────────────────
+.PHONY: prod-up prod-down prod-build prod-logs
+
+prod-up:
+	docker compose -f docker-compose.prod.yml up -d
+
+prod-down:
+	docker compose -f docker-compose.prod.yml down
+
+prod-build:
+	docker compose -f docker-compose.prod.yml build --no-cache
+
+prod-logs:
+	docker compose -f docker-compose.prod.yml logs -f backend
 
 # ── Utilitários ───────────────────────────────────────────────────────────────
 .PHONY: install help

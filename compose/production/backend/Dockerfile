@@ -17,4 +17,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+RUN printf '#!/bin/bash\nset -e\necho "→ Rodando migrations..."\nalembic upgrade head\necho "→ Iniciando servidor..."\nexec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2\n' > /entrypoint.prod.sh \
+    && chmod +x /entrypoint.prod.sh
+
+ENTRYPOINT ["/entrypoint.prod.sh"]

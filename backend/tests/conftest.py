@@ -1,32 +1,65 @@
+import os
+import subprocess
+from pathlib import Path
+
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from testcontainers.postgres import PostgresContainer
 
-from app.config import settings
-from app.infrastructure.database.session import Base, get_db
+from app.infrastructure.database.session import get_db
 from app.main import app
 
-test_engine = create_async_engine(settings.TEST_DATABASE_URL, echo=False)
-TestSessionLocal = async_sessionmaker(
-    bind=test_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+_BACKEND_DIR = Path(__file__).parent.parent
+
+
+@pytest.fixture(scope="session")
+def postgres_container():
+    with PostgresContainer("postgres:16") as pg:
+        yield pg
 
 
 @pytest_asyncio.fixture(scope="session")
-async def setup_database():
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await test_engine.dispose()
+async def setup_database(postgres_container: PostgresContainer):
+    host = postgres_container.get_container_host_ip()
+    port = str(postgres_container.get_exposed_port(5432))
+    user = postgres_container.username
+    password = postgres_container.password
+    dbname = postgres_container.dbname
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "POSTGRES_HOST": host,
+            "POSTGRES_PORT": port,
+            "POSTGRES_USER": user,
+            "POSTGRES_PASSWORD": password,
+            "POSTGRES_DB": dbname,
+        }
+    )
+    subprocess.run(
+        ["uv", "run", "alembic", "upgrade", "head"],
+        cwd=_BACKEND_DIR,
+        env=env,
+        check=True,
+        capture_output=True,
+    )
+
+    async_url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{dbname}"
+    engine = create_async_engine(async_url, echo=False)
+    yield engine
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture
 async def db_session(setup_database):
-    async with TestSessionLocal() as session:
+    session_factory = async_sessionmaker(
+        bind=setup_database,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    async with session_factory() as session:
         yield session
         await session.rollback()
 
@@ -41,8 +74,24 @@ async def async_client():
 
 
 @pytest_asyncio.fixture
-async def db_client(db_session: AsyncSession):
+async def db_client(db_session: AsyncSession, postgres_container: PostgresContainer):
     """HTTP client com sessão de teste injetada. Para testes de integração."""
+    host = postgres_container.get_container_host_ip()
+    port = str(postgres_container.get_exposed_port(5432))
+    user = postgres_container.username
+    password = postgres_container.password
+    dbname = postgres_container.dbname
+
+    # Override config so the app connects to the testcontainer
+    os.environ.update(
+        {
+            "POSTGRES_HOST": host,
+            "POSTGRES_PORT": port,
+            "POSTGRES_USER": user,
+            "POSTGRES_PASSWORD": password,
+            "POSTGRES_DB": dbname,
+        }
+    )
 
     async def override_get_db():
         yield db_session

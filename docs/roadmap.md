@@ -37,15 +37,35 @@ Adaptações: trocar `docagent.*` pelas importações locais; trocar `pwdlib` po
 
 ```
 main
-├── feature-1-architecture-ci
-├── feature-2-domain-models
-├── feature-3-auth
-├── feature-4-rooms
-├── feature-5-bookings
-├── feature-6-outbox-worker
-├── feature-7-frontend
-└── feature-8-polish
+├── feature-1-architecture-ci       ✓ merged
+├── feature-2-domain-models         ✓ merged
+├── feature-3-auth                  ✓ merged
+├── feature-4-rooms                 ✓ merged
+├── feature-5-bookings              ✓ merged
+├── feature-6-outbox-worker         ✓ merged (PR #8)
+├── feature-6c-booking-modal-dnd    ✓ merged (PR #9)
+├── feature-dark-mode               ✓ merged (PR #10)
+└── feature-10-live-meetings        🔲 planejada
 ```
+
+---
+
+---
+
+## Status por Fase
+
+| Fase | Branch | Status |
+|---|---|---|
+| 1 — Infraestrutura + CI | `feature-1-architecture-ci` | ✅ Concluída |
+| 2 — Domain + Models | `feature-2-domain-models` | ✅ Concluída |
+| 3 — Auth | `feature-3-auth` | ✅ Concluída |
+| 4 — Rooms | `feature-4-rooms` | ✅ Concluída |
+| 5 — Bookings | `feature-5-bookings` | ✅ Concluída |
+| 6 — Outbox + Worker | `feature-6-outbox-worker` | ✅ Concluída |
+| 7 — Frontend | `feature-7-frontend` | ✅ Concluída |
+| 8 — UX Polish + DnD | `feature-6c-booking-modal-dnd` | ✅ Concluída |
+| 9 — Dark Mode + Cor | `feature-dark-mode` | ✅ Concluída |
+| 10 — Live Meetings | `feature-10-live-meetings` | 🔲 Planejada |
 
 ---
 

@@ -6,13 +6,18 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# VITE_API_URL deve ser passado como build arg em produção
+# Ex: docker build --build-arg VITE_API_URL=https://exemplo.com/api
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=${VITE_API_URL}
+
 RUN npm run build
 
 # ---- runtime ----
 FROM nginx:alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
-
 COPY compose/production/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
