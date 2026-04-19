@@ -18,8 +18,8 @@ function formatDate(iso: string) {
 export function BookingList({ bookings, onCancel, onViewInCalendar }: BookingListProps) {
   if (bookings.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-200 bg-white py-12 text-center">
-        <p className="text-sm text-gray-400">Nenhuma reserva encontrada.</p>
+      <div className="rounded-xl border border-dashed border-gray-200 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-900">
+        <p className="text-sm text-gray-400 dark:text-gray-500">Nenhuma reserva encontrada.</p>
       </div>
     );
   }
@@ -34,23 +34,23 @@ export function BookingList({ bookings, onCancel, onViewInCalendar }: BookingLis
         return (
           <li
             key={b.id}
-            className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-5 py-4 shadow-sm"
+            className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-900"
           >
             <div className="flex items-start gap-4">
               {/* Data */}
-              <div className="flex min-w-[3rem] flex-col items-center rounded-lg bg-gray-50 px-3 py-2 text-center">
-                <span className="text-xs text-gray-400">{start.month}</span>
-                <span className="text-xl font-bold text-gray-800">{start.day}</span>
+              <div className="flex min-w-[3rem] flex-col items-center rounded-lg bg-gray-50 px-3 py-2 text-center dark:bg-gray-800">
+                <span className="text-xs text-gray-400 dark:text-gray-500">{start.month}</span>
+                <span className="text-xl font-bold text-gray-800 dark:text-gray-100">{start.day}</span>
               </div>
 
               {/* Info */}
               <div>
-                <p className="font-semibold text-gray-800">{b.title}</p>
-                <p className="mt-0.5 text-sm text-gray-500">
+                <p className="font-semibold text-gray-800 dark:text-gray-100">{b.title}</p>
+                <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
                   {start.time} – {end.time}
                 </p>
                 {b.participants.length > 0 && (
-                  <p className="mt-0.5 text-xs text-gray-400">
+                  <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
                     👥 {b.participants.map((p) => p.email).join(", ")}
                   </p>
                 )}
@@ -61,8 +61,8 @@ export function BookingList({ bookings, onCancel, onViewInCalendar }: BookingLis
               <span
                 className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                   isActive
-                    ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-500"
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
                 }`}
               >
                 {isActive ? "Ativa" : "Cancelada"}
@@ -70,7 +70,7 @@ export function BookingList({ bookings, onCancel, onViewInCalendar }: BookingLis
               {onViewInCalendar && (
                 <button
                   onClick={() => onViewInCalendar(b)}
-                  className="rounded-lg border border-blue-200 px-3 py-1 text-xs text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                  className="rounded-lg border border-blue-200 px-3 py-1 text-xs text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/30"
                   title="Ver no calendário"
                 >
                   📅 Calendário
@@ -79,7 +79,7 @@ export function BookingList({ bookings, onCancel, onViewInCalendar }: BookingLis
               {isActive && onCancel && (
                 <button
                   onClick={() => onCancel(b.id)}
-                  className="rounded-lg border border-red-200 px-3 py-1 text-xs text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
+                  className="rounded-lg border border-red-200 px-3 py-1 text-xs text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
                 >
                   Cancelar
                 </button>

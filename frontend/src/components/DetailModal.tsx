@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { bookingsApi, type Booking } from "../api/client";
 import { useFocusTrap } from "../hooks/useFocusTrap";
@@ -48,6 +49,7 @@ export function DetailModal({
   onEdit,
   onNavigate,
 }: DetailModalProps) {
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -76,7 +78,7 @@ export function DetailModal({
     >
       <div
         ref={containerRef}
-        className="w-full max-w-sm rounded-2xl bg-white shadow-2xl overflow-hidden"
+        className="w-full max-w-sm rounded-2xl bg-white shadow-2xl overflow-hidden dark:bg-gray-900"
         role="dialog"
         aria-modal="true"
         aria-labelledby="detail-modal-title"
@@ -100,24 +102,24 @@ export function DetailModal({
 
         {/* Body */}
         <div className="px-6 py-4 space-y-3">
-          <div className="flex items-start gap-3 text-sm text-gray-700">
-            <span className="mt-0.5 text-gray-400" aria-hidden="true">🕐</span>
+          <div className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+            <span className="mt-0.5 text-gray-400 dark:text-gray-500" aria-hidden="true">🕐</span>
             <div>
               <p>{fmt(booking.start_at)}</p>
-              <p className="text-gray-600">até {fmt(booking.end_at)}</p>
+              <p className="text-gray-600 dark:text-gray-400">até {fmt(booking.end_at)}</p>
             </div>
           </div>
 
           {booking.participants.length > 0 && (
-            <div className="flex items-start gap-3 text-sm text-gray-700">
-              <span className="mt-0.5 text-gray-400" aria-hidden="true">👥</span>
+            <div className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+              <span className="mt-0.5 text-gray-400 dark:text-gray-500" aria-hidden="true">👥</span>
               <p>{booking.participants.map((p) => p.email).join(", ")}</p>
             </div>
           )}
 
           {booking.notes && (
-            <div className="flex items-start gap-3 text-sm text-gray-700">
-              <span className="mt-0.5 text-gray-400" aria-hidden="true">📝</span>
+            <div className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+              <span className="mt-0.5 text-gray-400 dark:text-gray-500" aria-hidden="true">📝</span>
               <p className="whitespace-pre-wrap">{booking.notes}</p>
             </div>
           )}
@@ -127,18 +129,25 @@ export function DetailModal({
             <span
               className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 booking.status === "active"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
+                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                  : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
               }`}
             >
               {booking.status === "active" ? "Ativa" : "Cancelada"}
             </span>
           </div>
 
+          <button
+            onClick={() => { onClose(); navigate(`/rooms/${booking.room_id}`); }}
+            className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+          >
+            Ver sala →
+          </button>
+
           {onNavigate && (
             <button
               onClick={onNavigate}
-              className="text-xs text-blue-600 hover:underline"
+              className="text-xs text-blue-600 hover:underline dark:text-blue-400"
             >
               Ver no calendário →
             </button>
@@ -146,7 +155,7 @@ export function DetailModal({
         </div>
 
         {error && (
-          <p className="mx-6 mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p className="mx-6 mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
             {error}
           </p>
         )}
@@ -157,7 +166,7 @@ export function DetailModal({
             <>
               <button
                 onClick={() => setConfirming(false)}
-                className="flex-1 rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                className="flex-1 rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
               >
                 Voltar
               </button>
@@ -173,7 +182,7 @@ export function DetailModal({
             <>
               <button
                 onClick={onClose}
-                className="flex-1 rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                className="flex-1 rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
               >
                 Fechar
               </button>
@@ -182,7 +191,7 @@ export function DetailModal({
                   {onEdit && (
                     <button
                       onClick={onEdit}
-                      className="flex-1 rounded-lg border border-blue-600 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                      className="flex-1 rounded-lg border border-blue-600 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-900/30"
                     >
                       Editar
                     </button>

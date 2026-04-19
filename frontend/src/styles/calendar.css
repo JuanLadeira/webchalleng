@@ -43,3 +43,78 @@
   cursor: pointer !important;
 }
 .fc-daygrid-event { border-radius: 0.25rem !important; }
+
+/* ── Toolbar button spacing ─────────────────────────────────── */
+.fc .fc-toolbar-chunk {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.fc .fc-button-group {
+  gap: 0.25rem;
+  display: inline-flex;
+}
+.fc .fc-button-group > .fc-button:not(:first-child) {
+  margin-left: 0 !important;
+}
+
+/* ── Month view — full opacity for better visibility ────────── */
+.fc-daygrid-event {
+  opacity: 1 !important;
+  border-width: 0 !important;
+  padding: 1px 4px !important;
+}
+.fc-daygrid-event .fc-event-title {
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+}
+
+/* ── Dark mode overrides ────────────────────────────────────── */
+
+.dark .fc { color: #e5e7eb !important; }
+
+.dark .fc .fc-button {
+  background: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #d1d5db !important;
+}
+.dark .fc .fc-button:hover { background: #4b5563 !important; }
+.dark .fc .fc-button-active,
+.dark .fc .fc-button-primary:not(:disabled):active {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #fff !important;
+}
+.dark .fc .fc-today-button {
+  background: #1f2937 !important;
+  border-color: #3b82f6 !important;
+  color: #60a5fa !important;
+}
+.dark .fc .fc-toolbar-title { color: #f3f4f6 !important; }
+
+.dark .fc .fc-col-header-cell {
+  background: #1f2937 !important;
+  color: #9ca3af !important;
+}
+.dark .fc .fc-col-header-cell-cushion { color: #9ca3af !important; }
+
+.dark .fc .fc-timegrid-slot-label { color: #6b7280 !important; }
+.dark .fc .fc-timegrid-axis { background: #111827 !important; }
+
+.dark .fc .fc-daygrid-day { background: #111827 !important; }
+.dark .fc .fc-daygrid-day-number { color: #9ca3af !important; }
+.dark .fc .fc-day-today { background: #1e3a5f !important; }
+
+.dark .fc .fc-timegrid-col { background: #111827 !important; }
+.dark .fc .fc-timegrid-col.fc-day-today { background: #1e293b !important; }
+
+.dark .fc td,
+.dark .fc th { border-color: #374151 !important; }
+
+.dark .fc .fc-highlight { background: #1e3a5f !important; }
+.dark .fc .fc-daygrid-more-link { color: #60a5fa !important; }
+
+.dark .fc .fc-timegrid-now-indicator-line { border-color: #ef4444 !important; }
+.dark .fc .fc-timegrid-now-indicator-arrow { border-top-color: #ef4444 !important; }
+
+.dark .fc .fc-non-business { background: rgba(0,0,0,0.25) !important; }

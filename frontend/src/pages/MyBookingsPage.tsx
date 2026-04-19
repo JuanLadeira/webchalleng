@@ -31,24 +31,24 @@ function BookingRow({ booking, onClick }: BookingRowProps) {
     <li>
       <button
         onClick={onClick}
-        className="group flex w-full items-center justify-between rounded-xl border border-gray-100 bg-white px-5 py-4 shadow-sm transition-all hover:border-blue-200 hover:shadow-md text-left"
+        className="group flex w-full items-center justify-between rounded-xl border border-gray-100 bg-white px-5 py-4 shadow-sm transition-all hover:border-blue-200 hover:shadow-md text-left dark:border-gray-700 dark:bg-gray-900 dark:hover:border-blue-700"
       >
         <div className="flex items-start gap-4">
           {/* Data */}
-          <div className="flex min-w-[3.5rem] flex-col items-center rounded-lg bg-blue-50 px-3 py-2 text-center group-hover:bg-blue-100 transition-colors">
-            <span className="text-[10px] font-medium uppercase text-blue-400">{day.split(", ")[0]}</span>
-            <span className="text-xl font-bold text-blue-700">{day.split(", ")[1]?.split(" ")[0]}</span>
-            <span className="text-[10px] text-blue-400">{day.split(" ").slice(-1)[0]}</span>
+          <div className="flex min-w-[3.5rem] flex-col items-center rounded-lg bg-blue-50 px-3 py-2 text-center group-hover:bg-blue-100 transition-colors dark:bg-blue-900/30 dark:group-hover:bg-blue-900/50">
+            <span className="text-[10px] font-medium uppercase text-blue-400 dark:text-blue-300">{day.split(", ")[0]}</span>
+            <span className="text-xl font-bold text-blue-700 dark:text-blue-300">{day.split(", ")[1]?.split(" ")[0]}</span>
+            <span className="text-[10px] text-blue-400 dark:text-blue-300">{day.split(" ").slice(-1)[0]}</span>
           </div>
 
           {/* Info */}
           <div>
-            <p className="font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">
+            <p className="font-semibold text-gray-800 group-hover:text-blue-700 transition-colors dark:text-gray-100 dark:group-hover:text-blue-400">
               {booking.title}
             </p>
-            <p className="mt-0.5 text-sm text-gray-600">{range}</p>
+            <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">{range}</p>
             {booking.participants.length > 0 && (
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
                 <span aria-hidden="true">👥</span>{" "}
                 {booking.participants.map((p) => p.email).join(", ")}
               </p>
@@ -59,12 +59,12 @@ function BookingRow({ booking, onClick }: BookingRowProps) {
         <div className="flex items-center gap-3">
           <span
             className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+              isActive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
             }`}
           >
             {isActive ? "Ativa" : "Cancelada"}
           </span>
-          <span className="text-gray-300 group-hover:text-blue-400 transition-colors text-sm" aria-hidden="true">
+          <span className="text-gray-300 group-hover:text-blue-400 transition-colors text-sm dark:text-gray-600 dark:group-hover:text-blue-400" aria-hidden="true">
             →
           </span>
         </div>
@@ -136,8 +136,8 @@ export function MyBookingsPage() {
 
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Minhas Reservas</h2>
-          <p className="mt-1 text-sm text-gray-600">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Minhas Reservas</h2>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             Clique em uma reserva para ver detalhes, editar ou cancelar
           </p>
         </div>
@@ -166,12 +166,12 @@ export function MyBookingsPage() {
       {bookings && (
         <div className="space-y-8">
           <section>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
               Ativas ({active.length})
             </h3>
             {active.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-gray-200 bg-white py-12 text-center">
-                <p className="text-sm text-gray-500">Nenhuma reserva ativa.</p>
+              <div className="rounded-xl border border-dashed border-gray-200 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-900">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma reserva ativa.</p>
                 <button
                   onClick={() => navigate("/calendar")}
                   className="mt-2 text-sm text-blue-600 hover:underline"
@@ -190,7 +190,7 @@ export function MyBookingsPage() {
 
           {past.length > 0 && (
             <section>
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                 Histórico ({past.length})
               </h3>
               <ul className="space-y-3">

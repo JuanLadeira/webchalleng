@@ -6,7 +6,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
       {/* Overlay mobile */}
       {open && (
         <div
@@ -28,10 +28,10 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Conteúdo principal */}
       <main className="flex-1 overflow-y-auto">
         {/* Topbar hamburguer — visível só em mobile */}
-        <div className="sticky top-0 z-30 flex h-12 items-center border-b bg-white px-4 lg:hidden">
+        <div className="sticky top-0 z-30 flex h-12 items-center border-b bg-white px-4 dark:border-gray-700 dark:bg-gray-900 lg:hidden">
           <button
             onClick={() => setOpen(true)}
-            className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
+            className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
             aria-label="Abrir menu"
           >
             ☰

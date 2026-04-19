@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 import type { UserRole } from "../api/client";
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -39,6 +40,7 @@ interface SidebarProps {
 export function Sidebar({ onClose }: SidebarProps = {}) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const isOwner = user?.role === "OWNER" || user?.role === "SUPER_ADMIN";
 
   const handleLogout = () => {
@@ -93,6 +95,14 @@ export function Sidebar({ onClose }: SidebarProps = {}) {
 
       {/* Usuário + logout */}
       <div className="mt-auto border-t border-gray-700 pt-4">
+        <button
+          onClick={toggleTheme}
+          className="mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+          aria-label={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
+        >
+          <span aria-hidden="true">{theme === "dark" ? "☀️" : "🌙"}</span>
+          {theme === "dark" ? "Modo Claro" : "Modo Escuro"}
+        </button>
         <div className="mb-2 px-3">
           <p className="text-sm font-medium text-white">{user?.name}</p>
           <p className="truncate text-xs text-gray-500">{user?.email}</p>

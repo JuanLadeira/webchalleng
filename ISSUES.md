@@ -1,7 +1,7 @@
 # Issues & Backlog
 
 Levantamento gerado por revisão de agentes de Design/UX e Frontend (2026-04-18).
-Última atualização: 2026-04-18 — fase 6c.
+Última atualização: 2026-04-19 — feature-dark-mode.
 
 Legenda: ✅ resolvido | 🔲 backlog
 
@@ -208,34 +208,47 @@ Cada página tem estado de toast isolado.
 
 ---
 
-## História: Temas Claro e Escuro
+## ✅ História: Temas Claro e Escuro
 
-### [FEAT-01] Sistema de temas — modo claro e escuro
-
-**Descrição:**
-Implementar suporte a tema claro (padrão atual) e tema escuro, com persistência da preferência do usuário e respeito à configuração do sistema operacional (`prefers-color-scheme`).
+### ✅ [FEAT-01] Sistema de temas — modo claro e escuro
+**Implementado em:** `feature-dark-mode` (2026-04-19)
 
 **Critérios de aceitação:**
-- Toggle de tema acessível na sidebar (próximo ao perfil do usuário)
-- Preferência salva em `localStorage` para persistir entre sessões
-- Respeita `prefers-color-scheme: dark` do SO como valor inicial (se não houver preferência salva)
-- Todas as páginas e componentes adaptados: sidebar, modais, tabelas, formulários, calendário, toasts
-- FullCalendar com tema escuro (variáveis CSS `--fc-*` sobrescritas)
-- Transição suave entre temas (`transition-colors duration-200`)
+- ✅ Toggle de tema acessível na sidebar (botão ☀️/🌙 acima do perfil)
+- ✅ Preferência salva em `sessionStorage` (decisão técnica: mais seguro que `localStorage`)
+- ✅ Todas as páginas e componentes adaptados: sidebar, modais, tabelas, formulários, calendário
+- ✅ FullCalendar com tema escuro via `.dark .fc-*` em `calendar.css` (plain CSS, pois FullCalendar gera DOM em runtime — variantes `dark:` do Tailwind não alcançam esses elementos)
+- ✅ Espaçamento entre botões do toolbar do calendário
+- ✅ Maior visibilidade das reservas na visão de mês (opacidade e peso da fonte)
 
-**Abordagem técnica sugerida:**
-- Usar a estratégia `class` do Tailwind (`darkMode: "class"` em `tailwind.config.js`)
-- Adicionar/remover a classe `dark` no `<html>` via `ThemeContext`
-- Criar `useTheme` hook: `{ theme, toggleTheme }` com `localStorage` sync
-- Prefixar as classes sensíveis com `dark:` (ex.: `bg-white dark:bg-gray-900`, `text-gray-900 dark:text-gray-100`)
+**O que mudou na implementação:**
+- `prefers-color-scheme` **não** foi adotado como fallback — o padrão inicial é sempre claro para consistência da experiência.
+- Persistência via `sessionStorage` em vez de `localStorage` (mesma decisão aplicada ao token JWT e às configurações do calendário).
 
-**Escopo de trabalho estimado:**
-- `tailwind.config.js` — habilitar modo `class`
-- `src/contexts/ThemeContext.tsx` — novo contexto + hook
-- `src/components/Sidebar.tsx` — botão toggle + prefixos `dark:`
-- `src/components/Layout.tsx` — prefixos `dark:`
-- `src/pages/*` — prefixos `dark:` em todas as páginas
-- `src/components/BookingForm.tsx`, `Toast.tsx`, `BookingModal.tsx` — prefixos `dark:`
-- `src/styles/calendar.css` — variáveis `--fc-*` para o tema escuro
+---
 
-**Referência:** [Tailwind Dark Mode docs](https://tailwindcss.com/docs/dark-mode)
+## ✅ História: Configurações do Calendário
+
+### ✅ [FEAT-02] Painel de configurações do calendário
+**Implementado em:** `feature-dark-mode` (2026-04-19)
+
+Botão ⚙️ no header do `CalendarPage` abre painel com:
+- Range de horas visíveis (`slotMinTime` / `slotMaxTime`)
+- Tamanho do slot (15 min / 30 min / 1 h)
+- Horário comercial (início e fim do destaque cinza)
+- Máx. eventos por dia na visão mês
+- Toggle para ocultar finais de semana
+
+Configurações persistidas em `sessionStorage["calendarSettings"]`.
+
+---
+
+## ✅ História: Cor Customizada de Reserva
+
+### ✅ [FEAT-03] Cor por reserva no calendário
+**Implementado em:** `feature-dark-mode` (2026-04-19)
+
+- Nova coluna `color VARCHAR(20)` (nullable) em `bookings` — migração `0004`.
+- Color picker com 10 swatches predefinidos + opção "A" (automático) no modal de **edição**.
+- Calendário usa `booking.color ?? hashColor(title)` — fallback mantém comportamento anterior.
+- Alterar apenas a cor **não dispara e-mail** para os participantes (verificação via `model_fields_set`).

@@ -34,6 +34,7 @@ def _to_out(booking: Booking) -> BookingOut:
         end_at=booking.end_at,
         status=booking.status.value,
         notes=booking.notes,
+        color=booking.color,
         participants=[
             {"id": p.id, "email": p.email, "name": p.name}
             for p in booking.participants
@@ -172,12 +173,16 @@ class BookingService:
                 end_at=data.end_at,
                 participant_emails=data.participant_emails,
                 notes=data.notes,
+                color=data.color,
+                update_color="color" in data.model_fields_set,
             )
-            await self.outbox.create(
-                event_type=EventType.BOOKING_UPDATED,
-                booking_id=booking_id,
-                payload=_booking_payload(updated),
-            )
+            _NOTIFY_FIELDS = {"title", "start_at", "end_at", "participant_emails", "notes"}
+            if data.model_fields_set & _NOTIFY_FIELDS:
+                await self.outbox.create(
+                    event_type=EventType.BOOKING_UPDATED,
+                    booking_id=booking_id,
+                    payload=_booking_payload(updated),
+                )
         except IntegrityError as exc:
             await self.session.rollback()
             if _is_exclusion_violation(exc):

@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -31,6 +32,7 @@ function AdminFallback() {
 
 export default function App() {
   return (
+    <ThemeProvider>
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
@@ -70,11 +72,12 @@ export default function App() {
                 }
               />
 
-              <Route path="*" element={<Navigate to="/rooms" replace />} />
+              <Route path="*" element={<Navigate to="/calendar" replace />} />
             </Routes>
           </ToastProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
+    </ThemeProvider>
   );
 }

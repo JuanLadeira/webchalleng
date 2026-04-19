@@ -3,12 +3,12 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className = "" }: SkeletonProps) {
-  return <div className={`animate-pulse rounded bg-gray-200 ${className}`} aria-hidden="true" />;
+  return <div className={`animate-pulse rounded bg-gray-200 dark:bg-gray-700 ${className}`} aria-hidden="true" />;
 }
 
 export function SkeletonBookingCard() {
   return (
-    <div className="rounded-xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+    <div className="rounded-xl border border-gray-100 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
       <div className="flex items-start gap-4">
         <Skeleton className="h-14 w-14 rounded-lg" />
         <div className="flex-1 space-y-2">
