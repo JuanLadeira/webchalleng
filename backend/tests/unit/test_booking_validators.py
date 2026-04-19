@@ -36,8 +36,8 @@ class TestValidateBookingDates:
 
 
 class TestValidateBookingDuration:
-    def test_valid_duration_15min(self):
-        validate_booking_duration(NOW, NOW + timedelta(minutes=15))
+    def test_valid_duration_30min(self):
+        validate_booking_duration(NOW, NOW + timedelta(minutes=30))
 
     def test_valid_duration_8h(self):
         validate_booking_duration(NOW, NOW + timedelta(hours=8))
@@ -47,7 +47,11 @@ class TestValidateBookingDuration:
 
     def test_too_short_raises(self):
         with pytest.raises(BookingDurationError):
-            validate_booking_duration(NOW, NOW + timedelta(minutes=14))
+            validate_booking_duration(NOW, NOW + timedelta(minutes=29))
+
+    def test_15min_raises(self):
+        with pytest.raises(BookingDurationError):
+            validate_booking_duration(NOW, NOW + timedelta(minutes=15))
 
     def test_too_long_raises(self):
         with pytest.raises(BookingDurationError):

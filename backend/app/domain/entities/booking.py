@@ -26,6 +26,7 @@ class Booking:
     end_at: datetime
     id: UUID = field(default_factory=uuid4)
     status: BookingStatus = BookingStatus.ACTIVE
+    notes: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     participants: list[BookingParticipant] = field(default_factory=list)

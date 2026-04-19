@@ -34,10 +34,11 @@ export function RegisterPage() {
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700">
               Nome
             </label>
             <input
+              id="name"
               required
               type="text"
               value={name}
@@ -46,10 +47,11 @@ export function RegisterPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
               E-mail
             </label>
             <input
+              id="email"
               required
               type="email"
               value={email}
@@ -58,10 +60,11 @@ export function RegisterPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
               Senha
             </label>
             <input
+              id="password"
               required
               type="password"
               minLength={6}

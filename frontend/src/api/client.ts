@@ -17,7 +17,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("access_token");
-      window.location.href = "/login";
+      window.dispatchEvent(new Event("auth:logout"));
     }
     return Promise.reject(error);
   }
@@ -32,6 +32,9 @@ export interface Room {
   is_active: boolean;
 }
 
+export type BookingStatus = "active" | "cancelled";
+export type UserRole = "MEMBER" | "OWNER" | "SUPER_ADMIN";
+
 export interface Participant {
   id: string;
   email: string;
@@ -45,7 +48,8 @@ export interface Booking {
   user_id: string;
   start_at: string;
   end_at: string;
-  status: string;
+  status: BookingStatus;
+  notes: string | null;
   participants: Participant[];
 }
 
@@ -53,7 +57,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
   is_active: boolean;
   created_at: string;
 }
@@ -97,12 +101,21 @@ export const bookingsApi = {
   get: (id: string) => api.get<Booking>(`/bookings/${id}`),
   create: (data: {
     title: string;
+    room_id?: string;
     start_at: string;
     end_at: string;
     participant_emails?: string[];
+    notes?: string;
     recurrence?: "none" | "daily" | "weekly";
     recurrence_count?: number;
   }) => api.post<Booking>("/bookings", data),
+  update: (id: string, data: {
+    title?: string;
+    start_at?: string;
+    end_at?: string;
+    participant_emails?: string[];
+    notes?: string;
+  }) => api.patch<Booking>(`/bookings/${id}`, data),
   cancel: (id: string) => api.delete<Booking>(`/bookings/${id}`),
 };
 

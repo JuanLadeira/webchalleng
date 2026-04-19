@@ -21,16 +21,11 @@ export function BookingFormPage() {
     setFormError(null);
     setIsLoading(true);
     try {
-      const emails = data.participant_emails
-        .split(",")
-        .map((e) => e.trim())
-        .filter(Boolean);
-
       await bookingsApi.create({
         title: data.title,
         start_at: new Date(data.start_at).toISOString(),
         end_at: new Date(data.end_at).toISOString(),
-        participant_emails: emails,
+        participant_emails: data.participant_emails,
         recurrence: data.recurrence,
         recurrence_count: data.recurrence_count,
       });
@@ -38,11 +33,20 @@ export function BookingFormPage() {
       show("Reserva criada com sucesso!", "success");
       setTimeout(() => navigate("/calendar"), 1200);
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } }).response?.status;
+      const e = err as { response?: { status?: number; data?: { detail?: unknown } } };
+      const status = e.response?.status;
+      const detail = e.response?.data?.detail;
       if (status === 409) {
-        setFormError("Conflito de horário nesse período.");
+        setFormError(typeof detail === "string" ? detail : "Conflito de horário nesse período.");
       } else if (status === 422) {
-        setFormError("Dados inválidos. Verifique as datas e tente novamente.");
+        if (typeof detail === "string") {
+          setFormError(detail);
+        } else if (Array.isArray(detail) && detail.length > 0) {
+          const msg: string = detail[0]?.msg ?? "";
+          setFormError(msg.replace(/^Value error,\s*/i, "") || "Dados inválidos. Verifique as datas.");
+        } else {
+          setFormError("Dados inválidos. Verifique as datas e tente novamente.");
+        }
       } else {
         setFormError("Erro ao criar reserva. Tente novamente.");
       }
