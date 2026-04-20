@@ -33,9 +33,10 @@ def send_email(*, to: list[str], subject: str, html_body: str) -> None:
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 def _fmt_dt(iso: str) -> str:
-    from datetime import datetime, timezone
-    dt = datetime.fromisoformat(iso).astimezone(timezone.utc)
-    return dt.strftime("%d/%m/%Y às %H:%M (UTC)")
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    dt = datetime.fromisoformat(iso).astimezone(ZoneInfo("America/Sao_Paulo"))
+    return dt.strftime("%d/%m/%Y às %H:%M (Horário de Brasília)")
 
 
 _S_BODY = (
